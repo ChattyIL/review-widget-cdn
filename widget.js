@@ -7,12 +7,16 @@
   const root = hostEl.attachShadow({ mode: "open" });
 
   // Read endpoint from data attribute
-  const scriptEl = document.currentScript || Array.from(document.scripts).pop();
-  const endpoint = scriptEl?.getAttribute("data-endpoint");
-  if (!endpoint) {
-    root.innerHTML = `<div style="font-family: system-ui; color:#c00">Missing data-endpoint on <script> tag.</div>`;
-    return;
-  }
+  // Read slug from data attribute and build endpoint URL automatically
+const scriptEl = document.currentScript || Array.from(document.scripts).pop();
+const slug = scriptEl.getAttribute("data-slug");
+
+if (!slug) {
+  root.innerHTML = `<div style="font-family: system-ui; color:#c00">Missing data-slug on <script> tag.</div>`;
+  return;
+}
+
+const endpoint = `https://hook.eu2.make.com/aasl5df1y3qaxkbx9tp57miq9wcpnw8c?slug=${encodeURIComponent(slug)}`;
 
   // Base HTML skeleton
   root.innerHTML = `
