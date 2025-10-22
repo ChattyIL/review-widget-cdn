@@ -1,111 +1,239 @@
-// /public/widget.js
+// review-widget v1.0.0 — white theme, tighter height, auto-fit text, 10s/5s timing
 (() => {
   const hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
 
-  // Shadow DOM to isolate styles from site CSS
+  // Shadow DOM
   const root = hostEl.attachShadow({ mode: "open" });
 
-  // Read endpoint from data attribute
-  // Read slug from data attribute and build endpoint URL automatically
-const scriptEl = document.currentScript || Array.from(document.scripts).pop();
-const slug = scriptEl.getAttribute("data-slug");
+  // Read slug and build endpoint
+  const scriptEl = document.currentScript || Array.from(document.scripts).pop();
+  const slug = scriptEl && scriptEl.getAttribute("data-slug");
+  if (!slug) {
+    root.innerHTML = `<div style="font-family: system-ui; color:#c00">Missing data-slug on &lt;script&gt; tag.</div>`;
+    return;
+  }
+  const endpoint = `https://hook.eu2.make.com/aasl5df1y3qaxkbx9tp57miq9wcpnw8c?slug=${encodeURIComponent(slug)}`;
+  const DEBUG = new URLSearchParams(location.search).get('rw_debug') === '1';
 
-if (!slug) {
-  root.innerHTML = `<div style="font-family: system-ui; color:#c00">Missing data-slug on <script> tag.</div>`;
-  return;
-}
-
-const endpoint = `https://hook.eu2.make.com/aasl5df1y3qaxkbx9tp57miq9wcpnw8c?slug=${encodeURIComponent(slug)}`;
-
-  // Base HTML skeleton
+  // Base HTML (white theme + tighter layout)
   root.innerHTML = `
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap');
-
-      :host { all: initial; }
-      *, *::before, *::after { box-sizing: border-box; }
-
-      .rw-wrap {
-        position: fixed; right: 24px; bottom: 24px; z-index: 2147483647;
-        font-family: "Assistant", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans";
-        direction: rtl; /* RTL-safe */
-      }
-      .rw-list { display: flex; flex-direction: column; gap: 12px; }
-
+      :host{all:initial}*,*:before,*:after{box-sizing:border-box}
+      .rw-wrap{position:fixed;right:24px;bottom:24px;z-index:2147483647;font-family:"Assistant",ui-sans-serif,system-ui;direction:rtl}
+      .rw-list{display:flex;flex-direction:column;gap:12px}
       .rw-card{
-        position: relative;
-        --rw-w: min(92vw, 360px);
-        --rw-h: 140px;
-        width: var(--rw-w);
-        height: var(--rw-h);
-        background: #0f172a; color: #e5e7eb;
-        border-radius: 14px;
-        display: flex; gap: 12px; padding: 14px 16px;
-        box-shadow: 0 10px 28px rgba(0,0,0,.18), 0 0 0 1px rgba(255,255,255,.02);
-        overflow: hidden; opacity: 0; transform: translate(14px) scale(.98);
-        pointer-events: auto;
-        animation: rw-enter .35s cubic-bezier(.22,1,.36,1) forwards;
+        position:relative;--rw-w:min(92vw,360px);--rw-h:120px; /* shorter base */
+        width:var(--rw-w);height:var(--rw-h);
+        background:#ffffff;color:#111827;border-radius:14px;
+        display:flex;gap:10px;padding:12px 14px; /* tighter padding */
+        box-shadow:0 10px 24px rgba(0,0,0,.12), 0 1px 0 rgba(0,0,0,.06); /* soft black shadow */
+        overflow:hidden;opacity:0;transform:translate(14px) scale(.98);
+        animation:rw-enter .35s cubic-bezier(.22,1,.36,1) forwards
       }
-      .rw-card.rw-exiting { animation: rw-exit .24s cubic-bezier(.4,0,.2,1) forwards; }
-
-      .rw-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; flex: 0 0 42px; margin-top: 2px; background: #0ea5e9; }
-
-      /* Vertically center the content column */
-      .rw-body { min-width: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; }
-
-      .rw-header { font-weight: 700; font-size: 15px; margin-bottom: 4px; color: #f3f4f6; display:flex; align-items:center; gap:8px; }
-      .rw-stars { display:inline-flex; gap: 2px; transform: translateY(-1px); }
-      .rw-stars svg{ width:14px; height:14px; display:block; fill: #fbbf24; }
-
-      /* Dynamic text sizing: clamp base size, then JS will nudge smaller for very long text */
+      .rw-card.rw-exiting{animation:rw-exit .24s cubic-bezier(.4,0,.2,1) forwards}
+      .rw-avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;flex:0 0 40px;margin-top:2px;background:#e2e8f0}
+      .rw-body{min-width:0;flex:1;display:flex;flex-direction:column;justify-content:center}
+      .rw-header{font-weight:700;font-size:15px;margin:0 0 2px;color:#111111;display:flex;align-items:center;gap:8px} /* black name */
+      /* stars are in the footer */
+      .rw-stars{display:inline-flex;gap:2px;transform:translateY(-1px)}
+      .rw-stars svg{width:14px;height:14px;display:block;fill:#fbbf24}
       .rw-text{
-        flex: 1; overflow: hidden;
-        display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
-        line-height: 1.45; color: #d1d5db; white-space: normal;
-        font-size: clamp(13px, 1.7vw, 15px);
+        flex:1;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;
+        line-height:1.4;color:#333333; /* brighter black for content */
+        white-space:normal;font-size:15px;
+        transition:font-size .25s ease, -webkit-line-clamp .25s ease
       }
-
-      .rw-footer{ display: flex; align-items: center; gap: 8px; margin-top: 6px; opacity: .9; }
-      .rw-google { width: 16px; height: 16px; flex: 0 0 16px; opacity:.95; }
-
-      /* Close button (X) */
+      .rw-footer{display:flex;align-items:center;gap:8px;margin-top:4px;opacity:.95} /* less gap under text */
+      .rw-google{width:16px;height:16px;opacity:.95}
       .rw-close{
-        position:absolute; top:8px; left:8px; /* left for RTL; switch to right if LTR */
-        width:28px; height:28px; border:0; border-radius:8px;
-        background:#172033; color:#cbd5e1; display:grid; place-items:center;
-        line-height:1; font-size:16px; font-weight:700; cursor:pointer;
-        opacity:.85; transition:opacity .15s, transform .15s, background .15s;
+        position:absolute;top:8px;left:8px;width:28px;height:28px;border:0;border-radius:8px;
+        background:#eef2f7;color:#334155; /* light button on white card */
+        display:grid;place-items:center;line-height:1;font-size:16px;font-weight:700;cursor:pointer;opacity:.9;
+        transition:opacity .15s,transform .15s,background .15s
       }
-      .rw-close:hover{ opacity:1; transform:scale(1.05); background:#1e2a44; }
-
-      @keyframes rw-enter { from { opacity:0; transform: translate(14px) scale(.98) } to { opacity:1; transform: translate(0) scale(1) } }
-      @keyframes rw-exit { from { opacity:1; transform: translate(0) scale(1) } to { opacity:0; transform: translate(-14px) scale(.98) } }
+      .rw-close:hover{opacity:1;transform:scale(1.05);background:#e2e8f0}
+      @keyframes rw-enter{from{opacity:0;transform:translate(14px) scale(.98)}to{opacity:1;transform:translate(0) scale(1)}}
+      @keyframes rw-exit{from{opacity:1;transform:translate(0) scale(1)}to{opacity:0;transform:translate(-14px) scale(.98)}}
     </style>
-
-    <div class="rw-wrap">
-      <div class="rw-list" id="list"></div>
-    </div>
+    <div class="rw-wrap"><div class="rw-list" id="list"></div></div>
   `;
 
   const list = root.getElementById("list");
+  const starSvg = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.5l2.7 5.5 6.1.9-4.4 4.3 1 6.1L10 15.6l-5.4 2.9 1-6.1L1.2 7.9l6.1-.9L10 1.5z"/></svg>';
 
-  // Utilities
-  const starSvg = `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.5l2.7 5.5 6.1.9-4.4 4.3 1 6.1L10 15.6l-5.4 2.9 1-6.1L1.2 7.9l6.1-.9L10 1.5z"/></svg>`;
+  /* ------------------------------------------------------------------ */
+  /*                 NORMALIZER tuned for Make keys                     */
+  /* ------------------------------------------------------------------ */
+  const NAME_RE  = /(?:^|_|\b)(name|author|author_name|username|display[_ ]?name|title|Header|שם|מאת|כותב)(?:$|\b)/i;
+  const TEXT_RE  = /(?:^|_|\b)(text|comment|message|body|review|content|description|snippet|Content|ביקורת|תוכן|חוות[_ ]?דעת)(?:$|\b)/i;
+  const RATE_RE  = /(?:^|_|\b)(rating|stars|score|rate|ratingValue|starRating|value|דירוג|כוכבים)(?:$|\b)/i;
+  const PHOTO_RE = /(?:^|_|\b)(photoUrl|avatar|image|avatar_url|photo|profile_photo_url|Photo|reviewerPhotoUrl|תמונה)(?:$|\b)/i;
 
-  function makeCard(review) {
-    const { author = "לקוח", text = "", rating = 5, photoUrl } = review || {};
-    // Build DOM
+  function stripTags(s){ return String(s).replace(/<[^>]*>/g,'').trim(); }
+
+  function deepFind(obj, keyRegex, maxDepth=5){
+    const seen = new Set();
+    function walk(x, d){
+      if (!x || typeof x!=='object' || d>maxDepth || seen.has(x)) return undefined;
+      seen.add(x);
+      for (const k of Object.keys(x)){
+        const v = x[k];
+        if (keyRegex.test(k) && v!=null && String(v).trim()!=="") return v;
+        if (v && typeof v === 'object'){
+          const r = walk(v, d+1);
+          if (r !== undefined) return r;
+        }
+      }
+      return undefined;
+    }
+    return walk(obj,0);
+  }
+
+  function firstNonEmpty(...vals){
+    for (const v of vals){
+      if (v !== undefined && v !== null && String(v).trim() !== "") return String(v);
+    }
+    return "";
+  }
+
+  function normalizeReview(r = {}) {
+    const src = r.review || r.node || r.item || r.data || r;
+    const authorContainer = src.user || src.author || src.reviewer || src.owner || src.profile || {};
+
+    const author = firstNonEmpty(
+      src.Header,
+      deepFind(src, NAME_RE),
+      deepFind(authorContainer, NAME_RE),
+      src.author_name, src.authorName, src.userName,
+      authorContainer.display_name, authorContainer.name,
+      src.profile?.displayName, src.profile?.name,
+      src.title, src.name,
+      "לקוח"
+    );
+
+    const rawText = firstNonEmpty(
+      src.Content,
+      deepFind(src, TEXT_RE), src.text, src.comment, src.review, src.content, src.description, src.snippet, ""
+    );
+
+    const rawRating = firstNonEmpty(
+      deepFind(src, RATE_RE), src.rating, src.stars, src.score, src.rate, 5
+    );
+
+    const photoUrl = firstNonEmpty(
+      src.Photo, src.reviewerPhotoUrl,
+      deepFind(src, PHOTO_RE), deepFind(authorContainer, PHOTO_RE), ""
+    );
+
+    const ratingNum = Math.max(0, Math.min(5, Math.round(Number(rawRating) || 5)));
+
+    return {
+      author: stripTags(author) || "לקוח",
+      text: stripTags(rawText),
+      rating: ratingNum,
+      photoUrl: String(photoUrl || "")
+    };
+  }
+
+  function normalizeArray(payload) {
+    let arr = [];
+    if (Array.isArray(payload)) arr = payload;
+    else if (Array.isArray(payload?.reviews)) arr = payload.reviews;
+    else if (Array.isArray(payload?.data)) arr = payload.data;
+    else if (Array.isArray(payload?.items)) arr = payload.items;
+    else if (payload && typeof payload === "object") arr = [payload];
+
+    arr = arr.map(normalizeReview).filter(x => (x.text || x.author));
+    return arr.length ? arr : [{
+      author: "Amit",
+      text: "Great service and smooth experience. Will use again!",
+      rating: 5
+    }];
+  }
+  /* ------------------------------------------------------------------ */
+
+  // Inline Google icon (CSP-safe)
+  const googleSvg =
+    '<svg class="rw-google" viewBox="0 0 48 48" aria-hidden="true">'+
+    '<path d="M43.6 20.5H42V20H24v8h11.3A12.9 12.9 0 1 1 24 11a12.7 12.7 0 0 1 8.8 3.5l5.7-5.7A21 21 0 1 0 45 24c0-1.2-.1-2.1-.4-3.5z" fill="#FFC107"/>'+
+    '<path d="M6.3 14.7l6.6 4.8A12.7 12.7 0 0 1 24 11c3.6 0 6.9 1.5 9.2 3.9l5.8-5.8A21 21 0 0 0 6.3 14.7z" fill="#FF3D00"/>'+
+    '<path d="M24 45c5.4 0 10.3-2.1 13.9-5.6l-6.4-5.3A12.7 12.7 0 0 1 24 36a12.9 12.9 0 0 1-12.3-9l-6.5 5A21 21 0 0 0 24 45z" fill="#4CAF50"/>'+
+    '<path d="M43.6 20.5H42V20H24v8h11.3C34.8 32.1 29.9 36 24 36v9c8.6 0 16-6 18.4-14.5 0 0 1.2-4.3 1.2-10z" fill="#1976D2"/>'+
+    '</svg>';
+
+  // ---------- Dynamic sizing helpers ----------
+  function initialSizeByWords(text){
+    const words = String(text || "").trim().split(/\s+/).filter(Boolean).length;
+    // tighter base heights for white card
+    let fontPx = 15;
+    let clamp = 3;
+    let h = 120;             // base height
+
+    if (words > 25) { fontPx = 12; clamp = 5; h = 160; }
+    else if (words > 15) { fontPx = 13; clamp = 4; h = 140; }
+
+    return { fontPx, clamp, h };
+  }
+
+  function autoFitCard(card){
+    const content = card.querySelector('.rw-text');
+    if (!content) return;
+
+    const getNum = (v, d=0) => {
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : d;
+    };
+
+    let fontSize = getNum(content.style.fontSize || 15, 15);
+    let clamp = parseInt(content.style.webkitLineClamp || 3, 10);
+    const baseH = 120; // match CSS base
+
+    const setHeights = () => {
+      const extraLines = Math.max(0, clamp - 3);
+      const newH = baseH + (extraLines * 18); // tighter line height
+      card.style.setProperty("--rw-h", newH + "px");
+    };
+
+    setHeights();
+
+    let guard = 16;
+    const fits = () => content.scrollHeight <= content.clientHeight + 0.5;
+
+    requestAnimationFrame(() => {
+      while (!fits() && guard-- > 0) {
+        if (fontSize > 11) {
+          fontSize -= 1;
+          content.style.fontSize = fontSize + "px";
+        } else if (clamp < 6) {
+          clamp += 1;
+          content.style.webkitLineClamp = String(clamp);
+          setHeights();
+        } else {
+          break;
+        }
+      }
+    });
+  }
+  // -------------------------------------------
+
+  // TIMING: 10s display + 5s gap
+  const DISPLAY_MS = 10000;
+  const GAP_MS = 5000;
+
+  // Card UI
+  function makeCard(review){
+    const {author="לקוח", text="", rating=5, photoUrl} = review || {};
+
     const card = document.createElement("div");
     card.className = "rw-card";
 
-    // Avatar
     const avatar = document.createElement("img");
     avatar.className = "rw-avatar";
     avatar.src = photoUrl || "https://www.gravatar.com/avatar/?d=mp&s=80";
     avatar.alt = "";
 
-    // Body
     const body = document.createElement("div");
     body.className = "rw-body";
 
@@ -113,31 +241,28 @@ const endpoint = `https://hook.eu2.make.com/aasl5df1y3qaxkbx9tp57miq9wcpnw8c?slu
     header.className = "rw-header";
     header.textContent = author;
 
-    const stars = document.createElement("div");
-    stars.className = "rw-stars";
-    const starCount = Math.max(0, Math.min(5, Math.round(rating || 5)));
-    stars.innerHTML = new Array(starCount).fill(0).map(() => starSvg).join("");
-
-    header.appendChild(stars);
-
     const content = document.createElement("div");
     content.className = "rw-text";
     content.textContent = text;
 
+    // initial word-based sizing
+    const { fontPx, clamp, h } = initialSizeByWords(text);
+    content.style.fontSize = fontPx + "px";
+    content.style.webkitLineClamp = String(clamp);
+    card.style.setProperty("--rw-h", h + "px");
+
     const footer = document.createElement("div");
     footer.className = "rw-footer";
-    footer.innerHTML = `
-      <img class="rw-google" alt="Google" src="https://www.gstatic.com/images/branding/product/2x/google_g_48dp.png">
-      <span>ביקורת מגוגל</span>
-    `;
+    const starCount = Math.max(0, Math.min(5, Math.round(rating || 5)));
+    const starsHtml = new Array(starCount).fill(0).map(() => starSvg).join("");
+    footer.innerHTML = \`\${googleSvg}<div class="rw-stars">\${starsHtml}</div>\`;
 
-    // Close button
     const closeBtn = document.createElement("button");
     closeBtn.className = "rw-close";
     closeBtn.type = "button";
     closeBtn.setAttribute("aria-label", "Close");
     closeBtn.textContent = "×";
-    closeBtn.addEventListener("click", () => exitCard(card));
+    closeBtn.onclick = () => exitCard(card);
 
     body.appendChild(header);
     body.appendChild(content);
@@ -147,76 +272,47 @@ const endpoint = `https://hook.eu2.make.com/aasl5df1y3qaxkbx9tp57miq9wcpnw8c?slu
     card.appendChild(avatar);
     card.appendChild(body);
 
-    // Dynamic downscaling for very long text (keeps container size stable)
-    const len = (text || "").length;
-    if (len > 220) {
-      card.style.setProperty("--rw-h", "156px");
-      content.style.fontSize = "13px";
-    }
-    if (len > 360) {
-      content.style.fontSize = "12px";
-      card.style.setProperty("--rw-h", "164px");
-    }
     return card;
   }
 
-  function exitCard(card) {
+  function exitCard(card){
     if (!card || card.classList.contains("rw-exiting")) return;
     card.classList.add("rw-exiting");
     setTimeout(() => card.remove(), 260);
   }
 
-  // Rotation: show 5s, exit, 3s gap, next
-  let reviews = [];
-  let idx = 0;
-  let showing = null;
-  let timers = [];
-
-  function clearTimers() {
-    timers.forEach((t) => clearTimeout(t));
-    timers = [];
-  }
-
-  function showNext() {
-    clearTimers();
-    if (!reviews.length) return;
-
-    const review = reviews[idx % reviews.length];
-    idx++;
-
-    // Remove any current card
+  // Rotation
+  let reviews=[], idx=0, showing=null, timers=[];
+  function clearTimers(){timers.forEach(clearTimeout); timers=[]}
+  function showNext(){
+    clearTimers(); if(!reviews.length) return;
+    const review = reviews[idx % reviews.length]; idx++;
     if (showing) exitCard(showing);
-
-    // Add new card
     const card = makeCard(review);
     list.appendChild(card);
+    autoFitCard(card); // measure after mount
     showing = card;
 
-    // Schedule exit after 5s, then wait 3s and show next
     timers.push(setTimeout(() => {
       exitCard(card);
-      timers.push(setTimeout(showNext, 3000));
-    }, 5000));
+      timers.push(setTimeout(showNext, GAP_MS));
+    }, DISPLAY_MS));
   }
 
-  // Fetch reviews from Make (or fallback)
-  fetch(endpoint, { headers: { "Accept": "application/json" } })
-    .then(r => r.json())
-    .then(json => {
-      const arr = Array.isArray(json?.reviews) ? json.reviews : [];
-      reviews = arr.length ? arr : [{
-        author: "Shir",
-        text: "חוויה מצוינת! שירות מהיר ומקצועי. ממליצה בחום.",
-        rating: 5
-      }];
+  const list = root.getElementById("list");
+
+  // Fetch reviews
+  fetch(endpoint,{headers:{"Accept":"application/json"}})
+    .then(r=>r.json())
+    .then(json=>{
+      if (DEBUG) console.log("[RW] raw response:", json);
+      reviews = normalizeArray(json);
+      if (DEBUG) console.log("[RW] normalized:", reviews);
       showNext();
     })
-    .catch(() => {
-      reviews = [{
-        author: "Amit",
-        text: "Great service and smooth experience. Will use again!",
-        rating: 5
-      }];
+    .catch(err=>{
+      if (DEBUG) console.warn("[RW] fetch failed:", err);
+      reviews = normalizeArray(null);
       showNext();
     });
 
