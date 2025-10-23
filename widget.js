@@ -1,76 +1,65 @@
-(() => {
-  // ===== config (timings) =====
-  const DISPLAY_MS = 12000; // show each review for 12s
-  const BREAK_MS   = 8000;  // 8s break between reviews
-  const EXIT_MS    = 550;   // exit animation length (ms)
+// /public/widget.js
+// review-widget v1.0.x — stable MVP that worked on client sites.
+// Expects a full JSON endpoint passed via data-endpoint on the script tag.
 
-  // ===== host / shadow root =====
+(() => {
   const hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
+
+  // Shadow DOM (fallback to host for very old browsers)
   const root = hostEl.attachShadow ? hostEl.attachShadow({ mode: "open" }) : hostEl;
 
-  // read endpoint from script tag
+  // Read endpoint from the current <script> tag (the one that included this file)
   const scriptEl = document.currentScript || Array.from(document.scripts).pop();
   const endpoint = scriptEl && scriptEl.getAttribute("data-endpoint");
+
   if (!endpoint) {
     root.innerHTML =
       '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Missing <code>data-endpoint</code> on widget script.</div>';
     return;
   }
 
-  // ===== styles =====
+  // Basic styles injected into shadow root
   const style = document.createElement("style");
   style.textContent = `
     :host { all: initial; }
-    .wrap {
-      position: fixed;
-      right: 16px; bottom: 16px; /* always right side */
-      z-index: 2147483000;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-    }
-    .card {
-      width: 320px; max-width: 88vw;
-      background: #ffffff; color: #0b1220;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      border: 1px solid rgba(0,0,0,0.06);
-      overflow: hidden; direction: auto;
-      will-change: transform, opacity;
-    }
+    .wrap { position: fixed; inset-inline-end: 16px; inset-block-end: 16px; z-index: 2147483000;
+            font-family: "Assistant", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    .card { width: 320px; max-width: 88vw; background: #ffffff; color: #0b1220; border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25); border: 1px solid rgba(0,0,0,0.06);
+            overflow: hidden; direction: auto; }
     .row { display: grid; grid-template-columns: 40px 1fr 24px; gap: 10px; align-items: start; padding: 12px 12px 8px; }
     .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background:#eee; }
+    .meta { display:flex; flex-direction:column; gap:4px; }
     .name { font-weight: 700; font-size: 14px; line-height: 1.2; }
-    .body { padding: 0 12px 12px; font-size: 14px; line-height: 1.35; white-space: pre-wrap; }
+    .stars { display:flex; align-items:center; gap:2px; font-size: 14px; }
+    .body  { padding: 0 12px 12px; font-size: 14px; line-height: 1.35; }
     .body.small { font-size: 12.5px; }
     .body.tiny  { font-size: 11.5px; }
-    .brand {
-      display:flex; align-items:center; justify-content: space-between; gap:8px;
-      padding: 10px 12px; border-top: 1px solid rgba(0,0,0,0.07); font-size:12px; opacity:.95;
-    }
-    .brand-left { display:flex; align-items:center; gap:8px }
-    .glogo { width:16px; height:16px; border-radius:3px }
-    .stars { letter-spacing: 1px; color: #d4af37; } /* richer gold */
-    /* animations */
-    .enter { animation: popIn .45s cubic-bezier(.18,.89,.32,1.28) forwards; }
-    .exit  { animation: fadeOutDown .55s ease forwards; }
-    @keyframes popIn {
-      0% { opacity:0; transform: translateY(12px) scale(.98) }
-      100%{ opacity:1; transform: translateY(0) scale(1) }
-    }
-    @keyframes fadeOutDown {
-      0% { opacity:1; transform: translateY(0) }
-      100%{ opacity:0; transform: translateY(12px) }
-    }
+    .brand { display:flex; align-items:center; justify-content: space-between; gap:8px; padding: 10px 12px; border-top: 1px solid rgba(0,0,0,0.07); }
+    .gmark { display:flex; align-items:center; gap:6px; opacity:.9; font-size:12px; }
+    .xbtn { appearance:none; border:0; background:transparent; cursor:pointer; font-size:18px; line-height:1; padding:0; opacity:.6; }
+    .xbtn:hover { opacity:1; }
+    .fade-in  { animation: fadeIn .35s ease forwards; }
+    .fade-out { animation: fadeOut .35s ease forwards; }
+    @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+    @keyframes fadeOut { from { opacity:1; transform: translateY(0); } to { opacity:0; transform: translateY(8px); } }
   `;
   root.appendChild(style);
 
+  // Container
   const wrap = document.createElement("div");
   wrap.className = "wrap";
   root.appendChild(wrap);
 
-  // ===== helpers =====
-  const clamp = (s, max) => (s || "").slice(0, max);
-  const safeText = (x, max = 1000) => clamp(String(x ?? ""), max).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+  // Helpers
+  const mkStars = (n) => {
+    const out = [];
+    const val = Math.max(0, Math.min(5, Math.round(Number(n) || 0)));
+    for (let i = 0; i < 5; i++) out.push(i < val ? "★" : "☆");
+    return out.join(" ");
+  };
+
   const scaleClass = (t = "") => {
     const len = (t || "").trim().length;
     if (len > 220) return "tiny";
@@ -78,58 +67,64 @@
     return "";
   };
 
-  const mkStars = (n) => {
-    const full = Math.max(0, Math.min(5, Math.round(Number(n) || 0)));
-    return "★★★★★".slice(0, full).padEnd(5, "☆");
-  };
-
-  // normalize review object to our fields
-  const normalize = (r) => ({
-    name:  safeText(r.Header || r.authorName || r.userName || r.author || r.name || "Anonymous", 80),
-    text:  safeText((r.Content ?? r.text ?? r.reviewText ?? r.content ?? ""), 1200),
-    photo: (r.Photo || r.reviewerPhotoUrl || r.profilePhotoUrl || r.photoUrl || r.avatarUrl || ""),
-    rating: Math.round(Number(r.rating ?? r.stars ?? r.score ?? r.br100 ?? 5)) || 5
-  });
-
-  // ===== rendering =====
-  function makeCard(r) {
+  // Render one review card
+  function renderCard(r) {
     const card = document.createElement("div");
-    card.className = "card enter";
-
-    const header = document.createElement("div");
-    header.className = "row";
+    card.className = "card fade-in";
 
     const avatar = document.createElement("img");
     avatar.className = "avatar";
     avatar.alt = "";
-    avatar.decoding = "async";
-    avatar.loading = "lazy";
-    avatar.referrerPolicy = "no-referrer";
-    avatar.src = r.photo || "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+    avatar.src = r.profilePhotoUrl || r.photoUrl || r.avatarUrl || "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
-    const meta = document.createElement("div");
     const name = document.createElement("div");
     name.className = "name";
-    name.textContent = r.name;
-    meta.appendChild(name);
-    // NOTE: we intentionally do NOT add stars under the name anymore (per request)
+    name.textContent = r.authorName || r.userName || "Anonymous";
 
+    const stars = document.createElement("div");
+    stars.className = "stars";
+    stars.textContent = mkStars(r.rating);
+
+    const x = document.createElement("button");
+    x.className = "xbtn";
+    x.setAttribute("aria-label", "Close");
+    x.textContent = "×";
+    x.addEventListener("click", () => {
+      card.classList.remove("fade-in");
+      card.classList.add("fade-out");
+      setTimeout(() => card.remove(), 280);
+      // stop rotation on manual close
+      if (rotateTimer) clearTimeout(rotateTimer);
+    });
+
+    const header = document.createElement("div");
+    header.className = "row";
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.appendChild(name);
+    meta.appendChild(stars);
     header.appendChild(avatar);
     header.appendChild(meta);
-    header.appendChild(document.createElement("div")); // spacer
+    header.appendChild(x);
 
     const body = document.createElement("div");
-    body.className = "body " + scaleClass(r.text);
-    body.textContent = r.text;
+    body.className = "body " + scaleClass(r.text || r.content);
+    body.textContent = r.text || r.content || "";
 
     const brand = document.createElement("div");
     brand.className = "brand";
-    brand.innerHTML = `
-      <div class="brand-left">
-        <img class="glogo" alt="Google" src="https://www.gstatic.com/images/branding/product/1x/google_g_32dp.png" />
-      </div>
-      <div class="stars">${mkStars(r.rating)}</div>
-    `;
+    const gmark = document.createElement("div");
+    gmark.className = "gmark";
+    gmark.innerHTML =
+      '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"/><path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"/><path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72l3.29-2.34z"/><path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64l3.29 2.56c.77-2.32 2.93-4.7 5.49-4.7z"/></svg><span>Google Reviews</span>';
+
+    const bName = document.createElement("div");
+    bName.style.fontSize = "12px";
+    bName.style.opacity = "0.8";
+    bName.textContent = businessName || "";
+
+    brand.appendChild(gmark);
+    brand.appendChild(bName);
 
     card.appendChild(header);
     card.appendChild(body);
@@ -137,68 +132,52 @@
     return card;
   }
 
-  // ===== rotation =====
-  let items = [];
+  let businessName = "";
+  let reviews = [];
   let idx = 0;
-  let current = null;
-  let timerA = null, timerB = null;
+  let rotateTimer = null;
 
   function showNext() {
-    if (!items.length) return;
-    const r = items[idx];
-    idx = (idx + 1) % items.length;
+    if (!reviews.length) return;
+    const r = reviews[idx % reviews.length];
+    idx++;
 
-    // create & mount
-    current = makeCard(r);
-    wrap.textContent = ""; // show only one
-    wrap.appendChild(current);
+    const card = renderCard(r);
+    wrap.replaceChildren(card);
 
-    // schedule exit after DISPLAY_MS
-    timerA = setTimeout(() => {
-      if (!current) return;
-      current.classList.remove("enter");
-      current.classList.add("exit");
-      // after exit animation, clear and wait BREAK_MS, then next
-      timerB = setTimeout(() => {
-        wrap.textContent = ""; current = null;
-        setTimeout(showNext, BREAK_MS);
-      }, EXIT_MS);
-    }, DISPLAY_MS);
+    // auto-rotate: card visible ~5s, gap ~3s
+    if (rotateTimer) clearTimeout(rotateTimer);
+    rotateTimer = setTimeout(() => {
+      card.classList.remove("fade-in");
+      card.classList.add("fade-out");
+      setTimeout(() => {
+        if (wrap.contains(card)) wrap.removeChild(card);
+        rotateTimer = setTimeout(showNext, 300); // gap 0.3s before next fade-in
+      }, 280);
+    }, 5000);
   }
 
-  // ===== fetch + start =====
-  async function load() {
-    try {
-      const res = await fetch(endpoint, { method: "GET", credentials: "omit" });
-      const raw = await res.text();
-      if (!res.ok) throw new Error(raw || String(res.status));
+  // Container after functions to ensure it exists before first render
+  const wrap = document.createElement("div");
+  wrap.className = "wrap";
+  root.appendChild(wrap);
 
-      // parse JSON (even if sent as text/plain)
-      const looksJson = raw.trim().startsWith("{") || raw.trim().startsWith("[");
-      if (!looksJson) throw new Error("Expected JSON reviews array/object");
+  // Fetch reviews JSON from your proxy API (Make behind the scenes)
+  fetch(endpoint, { headers: { "Content-Type": "application/json" }, cache: "no-store" })
+    .then(r => r.json())
+    .then(data => {
+      // normalize shape
+      businessName = data.businessName || data.placeName || "";
+      reviews = Array.isArray(data.reviews) ? data.reviews : [];
+      if (!reviews.length && Array.isArray(data.items)) reviews = data.items;
 
-      const data = JSON.parse(raw);
-      const list = Array.isArray(data) ? data : (data.reviews || []);
-      if (!list.length) {
-        wrap.textContent = "";
-        const empty = document.createElement("div");
-        empty.className = "card";
-        empty.textContent = "אין ביקורות להצגה כרגע.";
-        wrap.appendChild(empty);
-        return;
-      }
-      items = list.map(normalize).filter(x => x.text || x.photo || x.name);
-      if (!items.length) throw new Error("No displayable reviews");
+      if (!reviews.length) throw new Error("No reviews returned");
       showNext();
-    } catch (err) {
-      console.error("[reviews-widget]", err);
-      wrap.textContent = "";
-      const errBox = document.createElement("div");
-      errBox.className = "card";
-      errBox.textContent = "שגיאה בטעינת הביקורות.";
-      wrap.appendChild(errBox);
-    }
-  }
-
-  requestAnimationFrame(load);
+    })
+    .catch(err => {
+      root.innerHTML =
+        `<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">
+           Widget error: ${String(err.message || err)}
+         </div>`;
+    });
 })();
