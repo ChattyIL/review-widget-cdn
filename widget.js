@@ -145,7 +145,7 @@
     const card = renderCard(r);
     wrap.replaceChildren(card);
 
-    // auto-rotate: card visible ~5s, gap ~3s (same cadence you liked)
+    // auto-rotate: card visible ~5s, gap ~3s
     if (rotateTimer) clearTimeout(rotateTimer);
     rotateTimer = setTimeout(() => {
       card.classList.remove("fade-in");
@@ -153,28 +153,25 @@
       setTimeout(() => {
         if (wrap.contains(card)) wrap.removeChild(card);
         rotateTimer = setTimeout(showNext, 300); // gap 0.3s before next fade-in
-      }, 5000 * 0 + 280); // keep 280ms fade-out; visible time handled by timeout below
-    }, 5000); // visible 5s
-    // Start next after exit gap:
-    setTimeout(() => {
-      // just schedules next
-    }, 5000 + 3000);
+      }, 280);
+    }, 5000);
   }
 
-  // Fetch reviews JSON from Make (GET) scenario
+  // Container after functions to ensure it exists before first render
+  const wrap = document.createElement("div");
+  wrap.className = "wrap";
+  root.appendChild(wrap);
+
+  // Fetch reviews JSON from your proxy API (Make behind the scenes)
   fetch(endpoint, { headers: { "Content-Type": "application/json" }, cache: "no-store" })
     .then(r => r.json())
     .then(data => {
       // normalize shape
       businessName = data.businessName || data.placeName || "";
       reviews = Array.isArray(data.reviews) ? data.reviews : [];
-      // some scenarios return { items: [...] }
       if (!reviews.length && Array.isArray(data.items)) reviews = data.items;
 
-      if (!reviews.length) {
-        throw new Error("No reviews returned");
-      }
-
+      if (!reviews.length) throw new Error("No reviews returned");
       showNext();
     })
     .catch(err => {
