@@ -1,5 +1,3 @@
-<!-- /public/widget.js -->
-<script>
 (() => {
   const hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -81,8 +79,7 @@
 
     header.appendChild(avatar);
     header.appendChild(meta);
-    // third column intentionally empty to keep grid template stable
-    header.appendChild(document.createElement("div"));
+    header.appendChild(document.createElement("div")); // spacer for grid
 
     const body = document.createElement("div");
     body.className = "body " + scaleClass(r.text || r.reviewText || r.content || "");
@@ -104,7 +101,7 @@
     card.className = "card fade-in";
     const body = document.createElement("div");
     body.className = "body";
-    body.innerHTML = html; // assume your Make response is trusted/sanitized
+    body.innerHTML = html; // assume Make response is safe
     card.appendChild(body);
     wrap.textContent = "";
     wrap.appendChild(card);
@@ -124,19 +121,17 @@
       if (ct.includes("application/json")) {
         try {
           const json = JSON.parse(raw);
-          // Accept either {reviews:[...]} or an array directly
           const list = Array.isArray(json) ? json : (json.reviews || []);
           if (!list.length) {
             renderHtml("<em>No reviews yet.</em>");
             return;
           }
-          // show just one (stable & simple)
-          renderCard(list[0]);
+          renderCard(list[0]); // show one
         } catch {
           renderHtml('<span style="color:#c00">Invalid JSON returned.</span>');
         }
       } else {
-        renderHtml(raw);
+        renderHtml(raw); // HTML passthrough
       }
     } catch (err) {
       console.error("[reviews-widget] error:", err);
@@ -146,4 +141,3 @@
 
   requestAnimationFrame(load);
 })();
-</script>
