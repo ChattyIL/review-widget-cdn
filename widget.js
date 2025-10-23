@@ -1,21 +1,21 @@
 (() => {
+  // 1) find host
   const hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
 
-  // Shadow DOM (fallback for old browsers)
+  // 2) shadow DOM (isolates styles)
   const root = hostEl.attachShadow ? hostEl.attachShadow({ mode: "open" }) : hostEl;
 
-  // The script tag that loaded this file
+  // 3) read data-endpoint from the <script> tag that loaded this file
   const scriptEl = document.currentScript || Array.from(document.scripts).pop();
   const endpoint = scriptEl && scriptEl.getAttribute("data-endpoint");
-
   if (!endpoint) {
     root.innerHTML =
       '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Missing <code>data-endpoint</code> on widget script.</div>';
     return;
   }
 
-  // Minimal styles (stable)
+  // 4) simple styles (clean and safe)
   const style = document.createElement("style");
   style.textContent = `
     :host { all: initial; }
@@ -41,13 +41,13 @@
   wrap.className = "wrap";
   root.appendChild(wrap);
 
+  // helpers
   const mkStars = (n) => {
     const out = [];
     const val = Math.max(0, Math.min(5, Math.round(Number(n) || 0)));
     for (let i = 0; i < 5; i++) out.push(i < val ? "★" : "☆");
     return out.join(" ");
   };
-
   const scaleClass = (t = "") => {
     const len = (t || "").trim().length;
     if (len > 220) return "tiny";
@@ -55,7 +55,25 @@
     return "";
   };
 
+  // ---- render one review card (you don't need to find this; it's here) ----
   function renderCard(r) {
+    const DEFAULT_AVATAR =
+      "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+
+    // map your Make fields:
+    // Header -> name, Content -> text, Photo -> avatar
+    const nameValue =
+      r.Header || r.authorName || r.userName || r.author || r.name || "Anonymous";
+
+    const rawText = r.Content ?? r.text ?? r.reviewText ?? r.content ?? "";
+    const textValue =
+      typeof rawText === "string" && /^https?:\/\//i.test(rawText) ? "" : (rawText || "");
+
+    const ratingValue = Math.round(Number(r.rating ?? r.stars ?? r.score ?? r.br100 ?? 5));
+
+    const avatarValue =
+      r.Photo || r.reviewerPhotoUrl || r.profilePhotoUrl || r.photoUrl || r.avatarUrl || DEFAULT_AVATAR;
+
     const card = document.createElement("div");
     card.className = "card fade-in";
 
@@ -65,15 +83,17 @@
     const avatar = document.createElement("img");
     avatar.className = "avatar";
     avatar.alt = "";
-    avatar.src = r.profilePhotoUrl || r.photoUrl || r.avatarUrl || "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+    avatar.src = avatarValue;
 
     const meta = document.createElement("div");
     const name = document.createElement("div");
     name.className = "name";
-    name.textContent = r.authorName || r.userName || r.author || r.name || "Anonymous";
+    name.textContent = nameValue;
+
     const stars = document.createElement("div");
     stars.className = "stars";
-    stars.textContent = mkStars(r.rating || r.stars || r.score || 5);
+    stars.textContent = mkStars(ratingValue);
+
     meta.appendChild(name);
     meta.appendChild(stars);
 
@@ -82,8 +102,8 @@
     header.appendChild(document.createElement("div")); // spacer for grid
 
     const body = document.createElement("div");
-    body.className = "body " + scaleClass(r.text || r.reviewText || r.content || "");
-    body.textContent = r.text || r.reviewText || r.content || "";
+    body.className = "body " + scaleClass(textValue);
+    body.textContent = textValue;
 
     const brand = document.createElement("div");
     brand.className = "brand";
@@ -92,25 +112,27 @@
     card.appendChild(header);
     card.appendChild(body);
     card.appendChild(brand);
-    wrap.textContent = ""; // keep only one visible
+    wrap.textContent = ""; // show only one at a time
     wrap.appendChild(card);
   }
 
+  // fallback if endpoint returns ready-made HTML (not JSON)
   function renderHtml(html) {
     const card = document.createElement("div");
     card.className = "card fade-in";
     const body = document.createElement("div");
     body.className = "body";
-    body.innerHTML = html; // assume Make response is safe
+    body.innerHTML = html; // trust your Make response
     card.appendChild(body);
     wrap.textContent = "";
     wrap.appendChild(card);
   }
 
+  // ---- load the data (this is the load() you asked about) ----
   async function load() {
     try {
       const res = await fetch(endpoint, { method: "GET", credentials: "omit" });
-      const ct = res.headers.get("content-type") || "";
+      const ct = (res.headers.get("content-type") || "").toLowerCase();
       const raw = await res.text();
 
       if (!res.ok) {
@@ -118,7 +140,10 @@
         renderHtml('<span style="color:#c00">Failed to load reviews.</span>');
         return;
       }
-      if (ct.includes("application/json")) {
+
+      // treat as JSON even if content-type is text/plain
+      const looksJson = raw.trim().startsWith("{") || raw.trim().startsWith("[");
+      if (ct.includes("application/json") || looksJson) {
         try {
           const json = JSON.parse(raw);
           const list = Array.isArray(json) ? json : (json.reviews || []);
@@ -126,13 +151,15 @@
             renderHtml("<em>No reviews yet.</em>");
             return;
           }
-          renderCard(list[0]); // show one
-        } catch {
-          renderHtml('<span style="color:#c00">Invalid JSON returned.</span>');
+          renderCard(list[0]); // show the first review
+          return;
+        } catch (e) {
+          console.warn("[reviews-widget] JSON parse failed, will render as HTML:", e);
         }
-      } else {
-        renderHtml(raw); // HTML passthrough
       }
+
+      // if not JSON, treat it as HTML snippet
+      renderHtml(raw);
     } catch (err) {
       console.error("[reviews-widget] error:", err);
       renderHtml('<span style="color:#c00">Error loading reviews.</span>');
