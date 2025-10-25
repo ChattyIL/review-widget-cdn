@@ -32,12 +32,12 @@
     .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background:#eee; }
     .meta { display:flex; flex-direction:column; gap:4px; }
     .name { font-weight: 700; font-size: 14px; line-height: 1.2; }
-    .stars { display:flex; align-items:center; gap:2px; font-size: 14px; }
     .body  { padding: 0 12px 12px; font-size: 14px; line-height: 1.35; }
     .body.small { font-size: 12.5px; }
     .body.tiny  { font-size: 11.5px; }
     .brand { display:flex; align-items:center; justify-content: space-between; gap:8px; padding: 10px 12px; border-top: 1px solid rgba(0,0,0,0.07); }
     .gmark { display:flex; align-items:center; gap:6px; opacity:.9; font-size:12px; }
+    .stars { display:flex; align-items:center; gap:2px; font-size: 14px; color: #FF9800; }
     .xbtn { appearance:none; border:0; background:transparent; cursor:pointer; font-size:18px; line-height:1; padding:0; opacity:.6; }
     .xbtn:hover { opacity:1; }
     .fade-in  { animation: fadeIn .35s ease forwards; }
@@ -81,10 +81,6 @@
     name.className = "name";
     name.textContent = r.authorName || r.userName || "Anonymous";
 
-    const stars = document.createElement("div");
-    stars.className = "stars";
-    stars.textContent = mkStars(r.rating);
-
     const x = document.createElement("button");
     x.className = "xbtn";
     x.setAttribute("aria-label", "Close");
@@ -102,7 +98,6 @@
     const meta = document.createElement("div");
     meta.className = "meta";
     meta.appendChild(name);
-    meta.appendChild(stars);
     header.appendChild(avatar);
     header.appendChild(meta);
     header.appendChild(x);
@@ -115,14 +110,20 @@
     brand.className = "brand";
     const gmark = document.createElement("div");
     gmark.className = "gmark";
-    gmark.innerHTML =
-      '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"/><path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"/><path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72l3.29-2.34z"/><path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64l3.29 2.56c.77-2.32 2.93-4.7 5.49-4.7z"/></svg><span>Google Reviews</span>';
+    
+    // Google G logo SVG
+    gmark.innerHTML = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>';
+
+    const stars = document.createElement("div");
+    stars.className = "stars";
+    stars.textContent = mkStars(r.rating);
 
     const bName = document.createElement("div");
     bName.style.fontSize = "12px";
     bName.style.opacity = "0.8";
     bName.textContent = businessName || "";
 
+    gmark.appendChild(stars);
     brand.appendChild(gmark);
     brand.appendChild(bName);
 
@@ -156,11 +157,6 @@
       }, 280);
     }, 5000);
   }
-
-  // Container after functions to ensure it exists before first render
-  const wrap = document.createElement("div");
-  wrap.className = "wrap";
-  root.appendChild(wrap);
 
   // Fetch reviews JSON from your proxy API (Make behind the scenes)
   fetch(endpoint, { headers: { "Content-Type": "application/json" }, cache: "no-store" })
