@@ -29,7 +29,7 @@
   var style = document.createElement("style");
   style.textContent = ''
     + ':host{all:initial;}'
-    + '.wrap{position:fixed;inset-inline-end:16px;inset-block-end:16px;z-index:2147483000;'
+    + '.wrap{position:fixed;inset-inline-end:86px;inset-block-end:16px;z-index:2147483000;'
     + 'font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}'
     + '.card{width:320px;max-width:88vw;background:#fff;color:#0b1220;border-radius:16px;'
     + 'box-shadow:0 10px 30px rgba(0,0,0,.25);border:1px solid rgba(0,0,0,.06);overflow:hidden;direction:auto;}'
