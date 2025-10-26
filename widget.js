@@ -1,16 +1,17 @@
-// review-widget v1.6.2 — rotation + avatar fallback + supports {Header, Content, Photo}
+// review-widget v1.7 — avatars: robust key mapping + debug + fallback
 (() => {
   const hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
 
   const root = hostEl.attachShadow ? hostEl.attachShadow({ mode: "open" }) : hostEl;
   const scriptEl = document.currentScript || Array.from(document.scripts).pop();
+
   const endpoint = scriptEl && scriptEl.getAttribute("data-endpoint");
-  const SHOW_MS = +(scriptEl?.getAttribute("data-show-ms") ?? 12000);
-  const GAP_MS  = +(scriptEl?.getAttribute("data-gap-ms")  ?? 500);
-  const FADE_MS = 350;
-  const DEBUG   = (scriptEl?.getAttribute("data-debug") || "0") === "1";
-  const log = (...a) => DEBUG && console.log("[reviews-widget v1.6.2]", ...a);
+  const SHOW_MS  = +(scriptEl?.getAttribute("data-show-ms") ?? 12000);
+  const GAP_MS   = +(scriptEl?.getAttribute("data-gap-ms")  ?? 500);
+  const FADE_MS  = 350;
+  const DEBUG    = (scriptEl?.getAttribute("data-debug") || "0") === "1";
+  const log      = (...a) => DEBUG && console.log("[reviews-widget v1.7]", ...a);
 
   if (!endpoint) {
     root.innerHTML =
@@ -28,7 +29,7 @@
             overflow: hidden; direction: auto; }
     .row { display: grid; grid-template-columns: 40px 1fr 24px; gap: 10px; align-items: start; padding: 12px 12px 8px; }
     .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background:#eee; display:block; }
-    .avatar-fallback { display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; }
+    .avatar-fallback { display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; width:40px; height:40px; border-radius:50%; }
     .meta { display:flex; flex-direction:column; gap:4px; }
     .name { font-weight: 700; font-size: 14px; line-height: 1.2; }
     .stars { margin-top: 4px; font-size: 13px; opacity:.9 }
@@ -61,11 +62,24 @@
     return "";
   };
   const colorFromString = (s = "") => {
-    let h = 0;
-    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
     return `hsl(${h % 360} 70% 45%)`;
   };
   const firstLetter = (s = "") => (s.trim()[0] || "?").toUpperCase();
+
+  // case-insensitive getter for image fields ("Photo", "profilePhotoUrl", etc.)
+  const getPhotoUrl = (obj) => {
+    if (!obj || typeof obj !== "object") return "";
+    for (const k of Object.keys(obj)) {
+      const lk = k.toLowerCase();
+      if (lk === "photo" || lk === "profilephotourl" || lk === "profile_photo_url" ||
+          lk === "photourl" || lk === "image" || lk === "imageurl" || lk === "avatar" || lk === "avatarurl") {
+        const v = String(obj[k] ?? "").trim();
+        if (v) return v;
+      }
+    }
+    return "";
+  };
 
   // normalize many JSON shapes → {authorName, text, rating, profilePhotoUrl}
   const normalize = (data) => {
@@ -81,46 +95,42 @@
       else if (data.text || data.Content || data.reviewText || data.content) arr = [data];
     }
     return arr.map(x => ({
-      authorName:
-        x.authorName || x.userName || x.Header || x.name || x.author || "Anonymous",
-      text:
-        x.text || x.reviewText || x.Content || x.content || "",
-      rating:
-        x.rating || x.stars || x.score || 5,
-      profilePhotoUrl:
-        // ✅ include "Photo" (capital P) + lots of alternates
-        x.Photo || x.photo || x.profilePhotoUrl || x.profile_photo_url || x.photoUrl || x.photoURL || x.photo ||
-        x.imageUrl || x.imageURL || x.image || x.img || x.icon ||
-        x.avatar || x.avatarUrl || x.avatarURL || x.AuthorPhoto || x.profileImage || x.profile_image || ""
+      authorName: x.authorName || x.userName || x.Header || x.name || x.author || "Anonymous",
+      text:       x.text || x.reviewText || x.Content || x.content || "",
+      rating:     x.rating || x.stars || x.score || 5,
+      profilePhotoUrl: getPhotoUrl(x)
     }));
   };
 
-  // avatar renderer with monogram fallback + onerror logging
+  // avatar renderer with monogram fallback + explicit logs
+  const renderMonogram = (name) => {
+    const div = document.createElement("div");
+    div.className = "avatar-fallback";
+    div.textContent = firstLetter(name);
+    div.style.background = colorFromString(name);
+    return div;
+  };
+
   const renderAvatar = (name, url) => {
     if (url) {
+      log("avatar url:", url);
       const img = document.createElement("img");
       img.className = "avatar";
       img.alt = "";
+      img.width = 40; img.height = 40;
+      img.crossOrigin = "anonymous"; // harmless if not needed
       img.decoding = "async";
       img.loading = "eager";
-      img.referrerPolicy = "no-referrer";
       img.src = url;
-      img.addEventListener("load", () => log("avatar ok:", url));
+      img.addEventListener("load", () => log("avatar ok"));
       img.addEventListener("error", () => {
-        log("avatar error, fallback:", url);
+        log("avatar error → fallback");
         img.replaceWith(renderMonogram(name));
       });
       return img;
     }
+    log("avatar: no url → fallback");
     return renderMonogram(name);
-  };
-
-  const renderMonogram = (name) => {
-    const div = document.createElement("div");
-    div.className = "avatar avatar-fallback";
-    div.textContent = firstLetter(name);
-    div.style.background = colorFromString(name);
-    return div;
   };
 
   function renderCard(r) {
@@ -184,7 +194,6 @@
     i++;
     wrap.innerHTML = "";
     wrap.appendChild(card);
-    log("show", i, "/", reviews.length);
     setTimeout(() => {
       card.classList.remove("fade-in");
       card.classList.add("fade-out");
@@ -213,6 +222,6 @@
         `<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">
            Widget error: ${String(err.message || err)}
          </div>`;
-      console.error("[reviews-widget v1.6.2]", err);
+      console.error("[reviews-widget v1.7]", err);
     });
 })();
