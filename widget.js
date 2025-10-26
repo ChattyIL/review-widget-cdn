@@ -193,18 +193,10 @@ root.appendChild(style);
   body.textContent = r.text || r.content || "";
 
   // brand row: Google "G" + 5 stars
-  var brand = document.createElement("div");
-  brand.className = "brand";
-  brand.innerHTML = ''
-    + '<span class="gmark" aria-label="Google">'
-    + '  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">'
-    + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"/>'
-    + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"/>'
-    + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72l3.29-2.34z"/>'
-    + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48ל2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64ל3.29 2.56c.77-2.32 2.93-4.7 5.49-4.7z"/>'
-    + '  </svg>'
-    + '</span>'
-    + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>';
+  // brand row: Google "G" + 5 stars
+var brand = document.createElement("div");
+brand.className = "brand";
+brand.innerHTML = '<span class="gmark" aria-label="Google"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path><path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path><path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72l3.29-2.34z"></path><path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64l3.29 2.56c.77-2.32 2.93-4.7 5.49-4.7z"></path></svg></span><span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>';
 
   card.appendChild(header);
   card.appendChild(body);
