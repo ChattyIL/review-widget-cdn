@@ -1,19 +1,17 @@
-// review-widget v1.3 — robust parsing + rotation + optional debug
+// review-widget v1.4 — rotates reliably + supports {Header, Content} shape
 (() => {
   const hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
 
-  // Shadow DOM (fallback for very old browsers)
   const root = hostEl.attachShadow ? hostEl.attachShadow({ mode: "open" }) : hostEl;
 
-  // Read config from the loader <script>
+  // Read config from loader <script>
   const scriptEl = document.currentScript || Array.from(document.scripts).pop();
   const endpoint = scriptEl && scriptEl.getAttribute("data-endpoint");
-  const SHOW_MS = +(scriptEl?.getAttribute("data-show-ms") ?? 12000); // visible time
+  const SHOW_MS = +(scriptEl?.getAttribute("data-show-ms") ?? 12000); // time visible
   const GAP_MS  = +(scriptEl?.getAttribute("data-gap-ms")  ?? 500);   // pause before next
-  const DEBUG   = (scriptEl?.getAttribute("data-debug") || "0") === "1";
   const FADE_MS = 350;
-
+  const DEBUG   = (scriptEl?.getAttribute("data-debug") || "0") === "1";
   const log = (...a) => { if (DEBUG) console.log("[reviews-widget]", ...a); };
 
   if (!endpoint) {
@@ -42,7 +40,6 @@
     .brand { display:flex; align-items:center; justify-content: space-between; gap:8px; padding: 10px 12px; border-top: 1px solid rgba(0,0,0,0.07); font-size:12px; opacity:.9; }
     .xbtn { appearance:none; border:0; background:transparent; cursor:pointer; font-size:18px; line-height:1; padding:0; opacity:.6; }
     .xbtn:hover { opacity:1; }
-
     .fade-in  { animation: fadeIn ${FADE_MS}ms ease forwards; }
     .fade-out { animation: fadeOut ${FADE_MS}ms ease forwards; }
     @keyframes fadeIn  { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
@@ -50,7 +47,6 @@
   `;
   root.appendChild(style);
 
-  // Container
   const wrap = document.createElement("div");
   wrap.className = "wrap";
   root.appendChild(wrap);
@@ -67,21 +63,28 @@
     return "";
   };
   const normalize = (data) => {
-    // Accept many common shapes
-    if (Array.isArray(data)) return data;
-    if (!data || typeof data !== "object") return [];
-    if (Array.isArray(data.reviews)) return data.reviews;
-    if (data.reviews && Array.isArray(data.reviews.items)) return data.reviews.items;
-    if (Array.isArray(data.items)) return data.items;
-    if (Array.isArray(data.data)) return data.data;
-    if (Array.isArray(data.results)) return data.results;
-    if (Array.isArray(data.records)) return data.records;
-    // Single-object fallback
-    if (data.text || data.reviewText || data.content) return [data];
-    return [];
+    // Accept many shapes; map to a uniform object {authorName, text, rating, profilePhotoUrl}
+    let arr = [];
+    if (Array.isArray(data)) arr = data;
+    else if (data && typeof data === "object") {
+      if (Array.isArray(data.reviews)) arr = data.reviews;
+      else if (data.reviews && Array.isArray(data.reviews.items)) arr = data.reviews.items;
+      else if (Array.isArray(data.items)) arr = data.items;
+      else if (Array.isArray(data.data)) arr = data.data;
+      else if (Array.isArray(data.results)) arr = data.results;
+      else if (Array.isArray(data.records)) arr = data.records;
+      else if (data.text || data.Content || data.reviewText || data.content) arr = [data];
+    }
+    // Map your {Header, Content} etc → standard keys
+    return arr.map(x => ({
+      authorName: x.authorName || x.userName || x.Header || x.name || "Anonymous",
+      text:       x.text || x.reviewText || x.Content || x.content || "",
+      rating:     x.rating || x.stars || x.score || 5,
+      profilePhotoUrl: x.profilePhotoUrl || x.photoUrl || x.avatarUrl || ""
+    }));
   };
 
-  function renderCard(r, businessName = "") {
+  function renderCard(r) {
     const card = document.createElement("div");
     card.className = "card fade-in";
 
@@ -91,18 +94,16 @@
     const avatar = document.createElement("img");
     avatar.className = "avatar";
     avatar.alt = "";
-    avatar.src =
-      r.profilePhotoUrl || r.photoUrl || r.avatarUrl ||
-      "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+    avatar.src = r.profilePhotoUrl || "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
     const meta = document.createElement("div");
     meta.className = "meta";
     const name = document.createElement("div");
     name.className = "name";
-    name.textContent = r.authorName || r.userName || r.author || r.name || "Anonymous";
+    name.textContent = r.authorName || "Anonymous";
     const stars = document.createElement("div");
     stars.className = "stars";
-    stars.textContent = mkStars(r.rating || r.stars || r.score || 5);
+    stars.textContent = mkStars(r.rating);
     meta.appendChild(name);
     meta.appendChild(stars);
 
@@ -116,8 +117,8 @@
     header.appendChild(x);
 
     const body = document.createElement("div");
-    body.className = "body " + scaleClass(r.text || r.reviewText || r.content || "");
-    body.textContent = r.text || r.reviewText || r.content || "";
+    body.className = "body " + scaleClass(r.text);
+    body.textContent = r.text;
 
     const brand = document.createElement("div");
     brand.className = "brand";
@@ -138,47 +139,41 @@
   }
 
   let reviews = [];
-  let idx = 0;
+  let i = 0;
   let timer = null;
   const stop = () => { if (timer) { clearTimeout(timer); timer = null; } };
 
-  function showNext() {
+  function cycle() {
     if (!reviews.length) return;
-    const r = reviews[idx % reviews.length];
-    idx++;
-
-    const card = renderCard(r);
+    const card = renderCard(reviews[i % reviews.length]);
+    i++;
     wrap.replaceChildren(card);
-    log("show", idx, "/", reviews.length, r?.authorName || r?.name || "");
 
-    stop();
-    // after visible time, fade out and queue next
+    // visible -> fade -> next
     timer = setTimeout(() => {
       card.classList.remove("fade-in");
       card.classList.add("fade-out");
       setTimeout(() => {
         if (wrap.contains(card)) wrap.removeChild(card);
-        timer = setTimeout(showNext, GAP_MS);
+        timer = setTimeout(cycle, GAP_MS); // small gap then next item
       }, FADE_MS);
     }, SHOW_MS);
   }
 
-  // Fetch and start
   fetch(endpoint, { method: "GET", credentials: "omit", cache: "no-store" })
     .then(async res => {
       const raw = await res.text();
       if (!res.ok) throw new Error(raw || `HTTP ${res.status}`);
       let parsed;
       try { parsed = JSON.parse(raw); }
-      catch { parsed = { reviews: [{ text: raw, rating: 5 }] }; } // HTML fallback
+      catch { parsed = { reviews: [{ text: raw }] }; } // HTML fallback
       return parsed;
     })
     .then(data => {
       reviews = normalize(data);
       log("fetched reviews:", reviews.length);
       if (!reviews.length) throw new Error("No reviews returned");
-      idx = 0;
-      showNext();
+      cycle();
     })
     .catch(err => {
       root.innerHTML =
