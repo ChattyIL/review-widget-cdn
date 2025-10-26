@@ -98,7 +98,7 @@
       authorName: x.authorName || x.userName || x.Header || x.name || x.author || "Anonymous",
       text:       x.text || x.reviewText || x.Content || x.content || "",
       rating:     x.rating || x.stars || x.score || 5,
-      profilePhotoUrl: x.Photo || getPhotoUrl(x)
+      profilePhotoUrl: x.Photo || getPhotoUrl(x) || x.reviewerPhotoUrl
     }));
   };
 
