@@ -98,7 +98,7 @@
       authorName: x.authorName || x.userName || x.Header || x.name || x.author || "Anonymous",
       text:       x.text || x.reviewText || x.Content || x.content || "",
       rating:     x.rating || x.stars || x.score || 5,
-      profilePhotoUrl: getPhotoUrl(x)
+      profilePhotoUrl: x.Photo || getPhotoUrl(x)
     }));
   };
 
@@ -140,7 +140,7 @@
     const header = document.createElement("div");
     header.className = "row";
 
-    const avatarEl = renderAvatar(r.authorName, r.profilePhotoUrl);
+    const avatarEl = renderAvatar(r.authorName, r.profilePhotoUrl || r.Photo);
 
     const meta = document.createElement("div");
     meta.className = "meta";
