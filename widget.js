@@ -1,18 +1,16 @@
-// review-widget v1.4 — rotates reliably + supports {Header, Content} shape
+// review-widget v1.6.2 — rotation + avatar fallback + supports {Header, Content, Photo}
 (() => {
   const hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
 
   const root = hostEl.attachShadow ? hostEl.attachShadow({ mode: "open" }) : hostEl;
-
-  // Read config from loader <script>
   const scriptEl = document.currentScript || Array.from(document.scripts).pop();
   const endpoint = scriptEl && scriptEl.getAttribute("data-endpoint");
-  const SHOW_MS = +(scriptEl?.getAttribute("data-show-ms") ?? 12000); // time visible
-  const GAP_MS  = +(scriptEl?.getAttribute("data-gap-ms")  ?? 500);   // pause before next
+  const SHOW_MS = +(scriptEl?.getAttribute("data-show-ms") ?? 12000);
+  const GAP_MS  = +(scriptEl?.getAttribute("data-gap-ms")  ?? 500);
   const FADE_MS = 350;
   const DEBUG   = (scriptEl?.getAttribute("data-debug") || "0") === "1";
-  const log = (...a) => { if (DEBUG) console.log("[reviews-widget]", ...a); };
+  const log = (...a) => DEBUG && console.log("[reviews-widget v1.6.2]", ...a);
 
   if (!endpoint) {
     root.innerHTML =
@@ -20,7 +18,6 @@
     return;
   }
 
-  // Styles
   const style = document.createElement("style");
   style.textContent = `
     :host { all: initial; }
@@ -30,7 +27,8 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.25); border: 1px solid rgba(0,0,0,0.06);
             overflow: hidden; direction: auto; }
     .row { display: grid; grid-template-columns: 40px 1fr 24px; gap: 10px; align-items: start; padding: 12px 12px 8px; }
-    .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background:#eee; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background:#eee; display:block; }
+    .avatar-fallback { display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; }
     .meta { display:flex; flex-direction:column; gap:4px; }
     .name { font-weight: 700; font-size: 14px; line-height: 1.2; }
     .stars { margin-top: 4px; font-size: 13px; opacity:.9 }
@@ -51,7 +49,7 @@
   wrap.className = "wrap";
   root.appendChild(wrap);
 
-  // Helpers
+  // helpers
   const mkStars = (n) => {
     const val = Math.max(0, Math.min(5, Math.round(Number(n) || 0)));
     return Array.from({ length: 5 }, (_, i) => (i < val ? "★" : "☆")).join(" ");
@@ -62,8 +60,15 @@
     if (len > 140) return "small";
     return "";
   };
+  const colorFromString = (s = "") => {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return `hsl(${h % 360} 70% 45%)`;
+  };
+  const firstLetter = (s = "") => (s.trim()[0] || "?").toUpperCase();
+
+  // normalize many JSON shapes → {authorName, text, rating, profilePhotoUrl}
   const normalize = (data) => {
-    // Accept many shapes; map to a uniform object {authorName, text, rating, profilePhotoUrl}
     let arr = [];
     if (Array.isArray(data)) arr = data;
     else if (data && typeof data === "object") {
@@ -75,13 +80,47 @@
       else if (Array.isArray(data.records)) arr = data.records;
       else if (data.text || data.Content || data.reviewText || data.content) arr = [data];
     }
-    // Map your {Header, Content} etc → standard keys
     return arr.map(x => ({
-      authorName: x.authorName || x.userName || x.Header || x.name || "Anonymous",
-      text:       x.text || x.reviewText || x.Content || x.content || "",
-      rating:     x.rating || x.stars || x.score || 5,
-      profilePhotoUrl: x.profilePhotoUrl || x.photoUrl || x.avatarUrl || ""
+      authorName:
+        x.authorName || x.userName || x.Header || x.name || x.author || "Anonymous",
+      text:
+        x.text || x.reviewText || x.Content || x.content || "",
+      rating:
+        x.rating || x.stars || x.score || 5,
+      profilePhotoUrl:
+        // ✅ include "Photo" (capital P) + lots of alternates
+        x.Photo || x.photo || x.profilePhotoUrl || x.profile_photo_url || x.photoUrl || x.photoURL || x.photo ||
+        x.imageUrl || x.imageURL || x.image || x.img || x.icon ||
+        x.avatar || x.avatarUrl || x.avatarURL || x.AuthorPhoto || x.profileImage || x.profile_image || ""
     }));
+  };
+
+  // avatar renderer with monogram fallback + onerror logging
+  const renderAvatar = (name, url) => {
+    if (url) {
+      const img = document.createElement("img");
+      img.className = "avatar";
+      img.alt = "";
+      img.decoding = "async";
+      img.loading = "eager";
+      img.referrerPolicy = "no-referrer";
+      img.src = url;
+      img.addEventListener("load", () => log("avatar ok:", url));
+      img.addEventListener("error", () => {
+        log("avatar error, fallback:", url);
+        img.replaceWith(renderMonogram(name));
+      });
+      return img;
+    }
+    return renderMonogram(name);
+  };
+
+  const renderMonogram = (name) => {
+    const div = document.createElement("div");
+    div.className = "avatar avatar-fallback";
+    div.textContent = firstLetter(name);
+    div.style.background = colorFromString(name);
+    return div;
   };
 
   function renderCard(r) {
@@ -91,10 +130,7 @@
     const header = document.createElement("div");
     header.className = "row";
 
-    const avatar = document.createElement("img");
-    avatar.className = "avatar";
-    avatar.alt = "";
-    avatar.src = r.profilePhotoUrl || "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+    const avatarEl = renderAvatar(r.authorName, r.profilePhotoUrl);
 
     const meta = document.createElement("div");
     meta.className = "meta";
@@ -112,7 +148,7 @@
     x.setAttribute("aria-label", "Close");
     x.textContent = "×";
 
-    header.appendChild(avatar);
+    header.appendChild(avatarEl);
     header.appendChild(meta);
     header.appendChild(x);
 
@@ -129,7 +165,7 @@
     card.appendChild(brand);
 
     x.addEventListener("click", () => {
-      stop();
+      if (loop) { clearInterval(loop); loop = null; }
       card.classList.remove("fade-in");
       card.classList.add("fade-out");
       setTimeout(() => card.remove(), FADE_MS);
@@ -140,25 +176,20 @@
 
   let reviews = [];
   let i = 0;
-  let timer = null;
-  const stop = () => { if (timer) { clearTimeout(timer); timer = null; } };
+  let loop = null;
 
-  function cycle() {
+  const show = () => {
     if (!reviews.length) return;
     const card = renderCard(reviews[i % reviews.length]);
     i++;
-    wrap.replaceChildren(card);
-
-    // visible -> fade -> next
-    timer = setTimeout(() => {
+    wrap.innerHTML = "";
+    wrap.appendChild(card);
+    log("show", i, "/", reviews.length);
+    setTimeout(() => {
       card.classList.remove("fade-in");
       card.classList.add("fade-out");
-      setTimeout(() => {
-        if (wrap.contains(card)) wrap.removeChild(card);
-        timer = setTimeout(cycle, GAP_MS); // small gap then next item
-      }, FADE_MS);
-    }, SHOW_MS);
-  }
+    }, Math.max(0, SHOW_MS - FADE_MS));
+  };
 
   fetch(endpoint, { method: "GET", credentials: "omit", cache: "no-store" })
     .then(async res => {
@@ -166,20 +197,22 @@
       if (!res.ok) throw new Error(raw || `HTTP ${res.status}`);
       let parsed;
       try { parsed = JSON.parse(raw); }
-      catch { parsed = { reviews: [{ text: raw }] }; } // HTML fallback
+      catch { parsed = { reviews: [{ text: raw }] }; }
       return parsed;
     })
     .then(data => {
       reviews = normalize(data);
-      log("fetched reviews:", reviews.length);
       if (!reviews.length) throw new Error("No reviews returned");
-      cycle();
+      i = 0;
+      show();
+      if (loop) clearInterval(loop);
+      loop = setInterval(show, SHOW_MS + GAP_MS);
     })
     .catch(err => {
       root.innerHTML =
         `<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">
            Widget error: ${String(err.message || err)}
          </div>`;
-      console.error("[reviews-widget]", err);
+      console.error("[reviews-widget v1.6.2]", err);
     });
 })();
