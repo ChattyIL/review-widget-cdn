@@ -27,38 +27,32 @@
   }
 
   var style = document.createElement("style");
-  style.textContent = ''
-    + ':host{all:initial;}'
-    + '.wrap{position:fixed;inset-inline-end:16px;inset-inline-start:auto;inset-block-end:16px;z-index:2147483000;/* hide stars under the name */
-.stars{ display:none !important; }
-'
-    + 'font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}'
-    + '.card{width:320px;max-width:88vw;background:#fff;color:#0b1220;border-radius:16px;'
-    + 'box-shadow:0 10px 30px rgba(0,0,0,.25);border:1px solid rgba(0,0,0,.06);overflow:hidden;direction:auto;}'
-    + '.row{display:grid;grid-template-columns:40px 1fr 24px;gap:10px;align-items:start;padding:12px 12px 8px;}'
-    + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#eee;display:block;}'
-    + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;}'
-    + '.meta{display:flex;flex-direction:column;gap:4px;}'
-    + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
-    + '.stars{margin-top:4px;font-size:13px;opacity:.9}'
-    + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;}'
-    + '.body.small{font-size:12.5px;}'
-    + '.body.tiny{font-size:11.5px;}'
-    + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;
-       padding:10px 12px;border-top:1px solid rgba(0,0,0,.07);font-size:12px;opacity:.9;}
-.gmark{display:flex;align-items:center;}
-.gstars{font-size:13px;opacity:.95;letter-spacing:1px;}
-/* hide the stars under the reviewer name */
-.stars{display:none!important;}
-'
-    + 'border-top:1px solid rgba(0,0,0,.07);font-size:12px;opacity:.9;}'
-    + '.xbtn{appearance:none;border:0;background:transparent;cursor:pointer;font-size:18px;line-height:1;padding:0;opacity:.6;}'
-    + '.xbtn:hover{opacity:1;}'
-    + '.fade-in{animation:fadeIn '+FADE_MS+'ms ease forwards;}'
-    + '.fade-out{animation:fadeOut '+FADE_MS+'ms ease forwards;}'
-    + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
-    + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}';
-  root.appendChild(style);
+style.textContent = ''
+  + ':host{all:initial;}'
+  + '.wrap{position:fixed;inset-inline-end:16px;inset-inline-start:auto;inset-block-end:16px;z-index:2147483000;}'
+  + '/* type styles */'
+  + '.card{width:320px;max-width:88vw;background:#fff;color:#0b1220;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);border:1px solid rgba(0,0,0,.06);overflow:hidden;direction:auto;}'
+  + '.row{display:grid;grid-template-columns:40px 1fr 24px;gap:10px;align-items:start;padding:12px 12px 8px;}'
+  + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#eee;display:block;}'
+  + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;}'
+  + '.meta{display:flex;flex-direction:column;gap:4px;}'
+  + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
+  + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;}'
+  + '.body.small{font-size:12.5px;}'
+  + '.body.tiny{font-size:11.5px;}'
+  /* NEW brand row + hide old stars */
+  + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(0,0,0,.07);font-size:12px;opacity:.9;}'
+  + '.gmark{display:flex;align-items:center;}'
+  + '.gstars{font-size:13px;opacity:.95;letter-spacing:1px;}'
+  + '.stars{display:none!important;}'
+  /* animations */
+  + '.fade-in{animation:fadeIn .35s ease forwards;}'
+  + '.fade-out{animation:fadeOut .35s ease forwards;}'
+  + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
+  + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
+;
+root.appendChild(style);
+
 
   var wrap = document.createElement("div");
   wrap.className = "wrap";
