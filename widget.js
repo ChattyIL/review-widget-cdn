@@ -1,16 +1,20 @@
-// review-widget v1.1 — cycles through reviews with fade in/out
+// review-widget v1.3 — robust parsing + rotation + optional debug
 (() => {
   const hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
 
+  // Shadow DOM (fallback for very old browsers)
   const root = hostEl.attachShadow ? hostEl.attachShadow({ mode: "open" }) : hostEl;
 
   // Read config from the loader <script>
   const scriptEl = document.currentScript || Array.from(document.scripts).pop();
   const endpoint = scriptEl && scriptEl.getAttribute("data-endpoint");
-  const SHOW_MS = +((scriptEl && scriptEl.getAttribute("data-show-ms")) || 12000); // visible time
-  const GAP_MS  = +((scriptEl && scriptEl.getAttribute("data-gap-ms"))  || 500);   // pause before next
-  const FADE_MS = 350; // must match CSS keyframe duration
+  const SHOW_MS = +(scriptEl?.getAttribute("data-show-ms") ?? 12000); // visible time
+  const GAP_MS  = +(scriptEl?.getAttribute("data-gap-ms")  ?? 500);   // pause before next
+  const DEBUG   = (scriptEl?.getAttribute("data-debug") || "0") === "1";
+  const FADE_MS = 350;
+
+  const log = (...a) => { if (DEBUG) console.log("[reviews-widget]", ...a); };
 
   if (!endpoint) {
     root.innerHTML =
@@ -46,7 +50,7 @@
   `;
   root.appendChild(style);
 
-  // Container (create ONCE)
+  // Container
   const wrap = document.createElement("div");
   wrap.className = "wrap";
   root.appendChild(wrap);
@@ -62,8 +66,22 @@
     if (len > 140) return "small";
     return "";
   };
+  const normalize = (data) => {
+    // Accept many common shapes
+    if (Array.isArray(data)) return data;
+    if (!data || typeof data !== "object") return [];
+    if (Array.isArray(data.reviews)) return data.reviews;
+    if (data.reviews && Array.isArray(data.reviews.items)) return data.reviews.items;
+    if (Array.isArray(data.items)) return data.items;
+    if (Array.isArray(data.data)) return data.data;
+    if (Array.isArray(data.results)) return data.results;
+    if (Array.isArray(data.records)) return data.records;
+    // Single-object fallback
+    if (data.text || data.reviewText || data.content) return [data];
+    return [];
+  };
 
-  function renderCard(r) {
+  function renderCard(r, businessName = "") {
     const card = document.createElement("div");
     card.className = "card fade-in";
 
@@ -73,7 +91,9 @@
     const avatar = document.createElement("img");
     avatar.className = "avatar";
     avatar.alt = "";
-    avatar.src = r.profilePhotoUrl || r.photoUrl || r.avatarUrl || "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+    avatar.src =
+      r.profilePhotoUrl || r.photoUrl || r.avatarUrl ||
+      "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
     const meta = document.createElement("div");
     meta.className = "meta";
@@ -107,7 +127,6 @@
     card.appendChild(body);
     card.appendChild(brand);
 
-    // Close button stops rotation
     x.addEventListener("click", () => {
       stop();
       card.classList.remove("fade-in");
@@ -121,19 +140,19 @@
   let reviews = [];
   let idx = 0;
   let timer = null;
-
-  function stop() { if (timer) { clearTimeout(timer); timer = null; } }
+  const stop = () => { if (timer) { clearTimeout(timer); timer = null; } };
 
   function showNext() {
     if (!reviews.length) return;
-
     const r = reviews[idx % reviews.length];
     idx++;
 
     const card = renderCard(r);
     wrap.replaceChildren(card);
+    log("show", idx, "/", reviews.length, r?.authorName || r?.name || "");
 
     stop();
+    // after visible time, fade out and queue next
     timer = setTimeout(() => {
       card.classList.remove("fade-in");
       card.classList.add("fade-out");
@@ -144,19 +163,21 @@
     }, SHOW_MS);
   }
 
-  // Fetch data and start rotation
+  // Fetch and start
   fetch(endpoint, { method: "GET", credentials: "omit", cache: "no-store" })
     .then(async res => {
-      const ct = res.headers.get("content-type") || "";
       const raw = await res.text();
       if (!res.ok) throw new Error(raw || `HTTP ${res.status}`);
-      if (ct.includes("application/json")) return JSON.parse(raw);
-      // If HTML returned, wrap as a single "review"
-      return { reviews: [{ text: raw, rating: 5, authorName: "" }] };
+      let parsed;
+      try { parsed = JSON.parse(raw); }
+      catch { parsed = { reviews: [{ text: raw, rating: 5 }] }; } // HTML fallback
+      return parsed;
     })
     .then(data => {
-      reviews = Array.isArray(data) ? data : (Array.isArray(data.reviews) ? data.reviews : (Array.isArray(data.items) ? data.items : []));
+      reviews = normalize(data);
+      log("fetched reviews:", reviews.length);
       if (!reviews.length) throw new Error("No reviews returned");
+      idx = 0;
       showNext();
     })
     .catch(err => {
