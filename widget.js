@@ -12,6 +12,10 @@
   var GAP_MS  = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))  || 500);
   var FADE_MS = 350;
   var DEBUG   = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
+// Optional promo badge (company logo → free trial)
+var BADGE_URL   = scriptEl && scriptEl.getAttribute("data-badge-url");   // e.g. https://evid.com/free-trial
+var BADGE_IMG   = scriptEl && scriptEl.getAttribute("data-badge-img");   // e.g. https://cdn…/evid-logo.png or .svg
+var BADGE_LABEL = (scriptEl && scriptEl.getAttribute("data-badge-label")) || "Free trial";
 
   function log() {
     if (!DEBUG) return;
@@ -47,6 +51,12 @@ style.textContent = ''
   + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(0,0,0,.07);font-size:12px;opacity:.9;}'
   + '.gmark{display:flex;align-items:center;}'
   + '.gstars{font-size:13px;opacity:.95;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
+  /* badge (logo → far corner) */
++ '.badge{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;background:#0b5cff;color:#fff;padding:6px 8px;border-radius:10px;text-decoration:none;font-weight:700;font-size:12px;box-shadow:0 4px 12px rgba(0,0,0,.12);transform:translateZ(0);}'
++ '.badge:hover{filter:brightness(1.05);transform:translateY(-1px);}'
++ '.badge:active{transform:translateY(0);}'
++ '.badge img{width:16px;height:16px;display:block;border-radius:4px;}'
++ '.badge span{display:none;}/* keep only the logo by default; remove this rule to show text */'
   + '.xbtn{appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
 + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;}'
 + '.xbtn:active{transform:translateY(0);}'
@@ -210,7 +220,26 @@ body.textContent = shortText;
   // brand row: Google "G" + 5 stars
 var brand = document.createElement("div");
 brand.className = "brand";
-brand.innerHTML = '<span class="gmark" aria-label="Google"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path><path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path><path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72l3.29-2.34z"></path><path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64l3.29 2.56c.77-2.32 2.93-4.7 5.49-4.7z"></path></svg></span><span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>';
+var badgeHtml = '';
+if (BADGE_URL || BADGE_IMG) {
+  badgeHtml =
+    '<a class="badge" href="' + (BADGE_URL || '#') + '" target="_blank" rel="noopener noreferrer" aria-label="' + BADGE_LABEL + '">'
+    + (BADGE_IMG ? '<img src="' + BADGE_IMG + '" alt="Evid">' : '<span>' + BADGE_LABEL + '</span>')
+    + '</a>';
+}
+
+brand.innerHTML =
+  '<span class="gmark" aria-label="Google">'
++ '  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">'
++ '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path>'
++ '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
++ '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72l3.29-2.34z"></path>'
++ '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64l3.29 2.56c.77-2.32 2.93-4.7 5.49-4.7z"></path>'
++ '  </svg>'
++ '</span>'
++ '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>'
++ badgeHtml;
+
 
   card.appendChild(header);
   card.appendChild(body);
