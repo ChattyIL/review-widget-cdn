@@ -30,11 +30,12 @@
 style.textContent = ''
   + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
   + ':host{all:initial;}'
-  + '.wrap{position:fixed;inset-inline-end:16px;inset-inline-start:auto;inset-block-end:16px;z-index:2147483000;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}'
+  + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}'
+
 
   + '/* type styles */'
   + '.card{width:320px;max-width:88vw;background:#fff;color:#0b1220;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);border:1px solid rgba(0,0,0,.06);overflow:hidden;direction:auto;}'
-  + '.row{display:grid;grid-template-columns:40px 1fr 24px;gap:10px;align-items:start;padding:12px 12px 8px;}'
+  + '.row{display:grid;grid-template-columns:40px 1fr 24px;gap:10px;align-items:center;padding:12px 12px 8px;}'
   + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#eee;display:block;}'
   + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;}'
   + '.meta{display:flex;flex-direction:column;gap:4px;}'
@@ -45,7 +46,7 @@ style.textContent = ''
   /* NEW brand row + hide old stars */
   + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(0,0,0,.07);font-size:12px;opacity:.9;}'
   + '.gmark{display:flex;align-items:center;}'
-  + '.gstars{font-size:13px;opacity:.95;letter-spacing:1px;}'
+  + '.gstars{font-size:13px;opacity:.95;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
   + '.xbtn{appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
 + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;}'
 + '.xbtn:active{transform:translateY(0);}'
@@ -86,6 +87,11 @@ root.appendChild(style);
     s = (s || "").trim();
     return (s[0] || "?").toUpperCase();
   }
+function truncateWords(s, n) {
+  s = (s || "").replace(/\s+/g, " ").trim();
+  var parts = s ? s.split(" ") : [];
+  return parts.length > n ? parts.slice(0, n).join(" ") + "…" : s;
+}
 
   // Case-insensitive photo key finder (covers Photo, reviewerPhotoUrl, etc.)
   function getPhotoUrl(obj) {
@@ -194,8 +200,11 @@ root.appendChild(style);
   header.appendChild(x);
 
   var body = document.createElement("div");
-  body.className = "body " + scaleClass(r.text || r.content);
-  body.textContent = r.text || r.content || "";
+var fullText = r.text || r.content || "";
+var shortText = truncateWords(fullText, 20);
+body.className = "body " + scaleClass(shortText);
+body.textContent = shortText;
+
 
   // brand row: Google "G" + 5 stars
   // brand row: Google "G" + 5 stars
