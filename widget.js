@@ -23,7 +23,7 @@
                      "https://evid.com/free-trial";
   var BADGE_IMG    = (scriptEl && scriptEl.getAttribute("data-badge-img")) ||
     // small inline SVG (blue rounded square + white plus), URL-encoded # colors
-      "https://cdn.jsdelivr.net/gh/ChattyIL/review-widget-cdn@v2.3.1/assets/evid-badge.png";
+      "https://cdn.jsdelivr.net/gh/ChattyIL/review-widget-cdn@v2.3.2/assets/evid-badge.png";
   var BADGE_LABEL  = (scriptEl && scriptEl.getAttribute("data-badge-label")) || "Free trial";
 
   function log() {
