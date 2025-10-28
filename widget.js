@@ -1,4 +1,3 @@
-<script>
 // review-widget v1.9.2 — ES5-safe, rotating cards, golden stars, 20-word cap
 // Built-in tiny text badge "מאומת EVID ✓" (no extra embed attributes needed)
 (function () {
@@ -203,4 +202,3 @@
       console.error("[reviews-widget v1.9.2]", err);
     });
 })();
-</script>
