@@ -42,8 +42,10 @@
     + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(0,0,0,.07);font-size:12px;opacity:.95;}'
     + '.gmark{display:flex;align-items:center;}'
     + '.gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
-    + '.badgeText{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#111;opacity:.9;}'
-    + '.badgeText .tick{font-size:12px;line-height:1;}'      /* ✓ */
+    + '.badgeText{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.9;}'
++ '.badgeText .verified{color:#444;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;font-weight:600;}'
++ '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
++ '.badgeText .tick{font-size:12px;line-height:1;}'
     + '.xbtn{appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
     + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;}'
     + '.xbtn:active{transform:translateY(0);}'
@@ -151,7 +153,11 @@
       + '  </svg>'
       + '</span>'
       + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>'
-      + '<span class="badgeText" aria-label="Verified by Evid"><span class="tick">✓</span><span>מאומת EVID</span></span>';
+      + '<span class="badgeText" aria-label="Verified by Evid">'
++   '<span class="verified">מאומת</span>'
++   '<span class="evid">EVID<span class="tick" aria-hidden="true">✓</span></span>'
++ '</span>';
+
 
     card.appendChild(header); card.appendChild(body); card.appendChild(brand);
     return card;
