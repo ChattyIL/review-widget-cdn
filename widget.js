@@ -1,4 +1,5 @@
-// review-widget v1.9.1 — ES5-safe, rotating cards, golden stars, 20-word cap
+<script>
+// review-widget v1.9.2 — ES5-safe, rotating cards, golden stars, 20-word cap
 // Built-in tiny text badge "מאומת EVID ✓" (no extra embed attributes needed)
 (function () {
   var hostEl = document.getElementById("reviews-widget");
@@ -10,12 +11,12 @@
 
   // Config from embed (endpoint is required)
   var endpoint = scriptEl && scriptEl.getAttribute("data-endpoint");
-  var SHOW_MS  = Number((scriptEl && scriptEl.getAttribute("data-show-ms")) || 12000);
-  var GAP_MS   = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))  || 500);
+  var SHOW_MS  = Number((scriptEl && scriptEl.getAttribute("data-show-ms")) || 15000); // default 15s
+  var GAP_MS   = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))  || 6000);  // default 6s
   var FADE_MS  = 350;
   var DEBUG    = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
 
-  function log(){ if (DEBUG) { var a=["[reviews-widget v1.9.1]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if (DEBUG) { var a=["[reviews-widget v1.9.2]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!endpoint) {
     root.innerHTML =
@@ -38,18 +39,18 @@
     + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;}'
     + '.body.small{font-size:12.5px;}'
     + '.body.tiny{font-size:11.5px;}'
-    // bottom brand row (Google G + ★★★★★ + tiny badge)
+    /* bottom brand row (Google G + ★★★★★ + tiny badge) */
     + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(0,0,0,.07);font-size:12px;opacity:.95;}'
     + '.gmark{display:flex;align-items:center;}'
     + '.gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
     + '.badgeText{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.9;}'
-+ '.badgeText .verified{color:#444;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;font-weight:600;}'
-+ '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
-+ '.badgeText .tick{font-size:12px;line-height:1;}'
+    + '.badgeText .verified{color:#444;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;font-weight:600;}'
+    + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
+    + '.badgeText .tick{font-size:12px;line-height:1;}'
     + '.xbtn{appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
     + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;}'
     + '.xbtn:active{transform:translateY(0);}'
-    + '.stars{display:none!important;}' // hide old under-name stars
+    + '.stars{display:none!important;}' /* hide old under-name stars */
     + '.fade-in{animation:fadeIn .35s ease forwards;}'
     + '.fade-out{animation:fadeOut .35s ease forwards;}'
     + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
@@ -134,7 +135,14 @@
     name.textContent=r.authorName||"Anonymous"; meta.appendChild(name);
 
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
-    x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ card.remove(); if(loop){ clearInterval(loop); loop=null; } }, FADE_MS); });
+    x.addEventListener("click",function(){
+      card.classList.remove("fade-in");
+      card.classList.add("fade-out");
+      setTimeout(function(){
+        card.remove();
+        if(loop){ clearInterval(loop); loop=null; }
+      }, FADE_MS);
+    });
 
     header.appendChild(avatarEl); header.appendChild(meta); header.appendChild(x);
 
@@ -148,16 +156,15 @@
       + '  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">'
       + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path>'
       + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
-      + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72ל3.29-2.34z"></path>'
-      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64ל3.29 2.56c.77-2.32 2.93-4.7 5.49-4.7z"></path>'
+      + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
+      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
       + '  </svg>'
       + '</span>'
       + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>'
       + '<span class="badgeText" aria-label="Verified by Evid">'
-+   '<span class="verified">מאומת</span>'
-+   '<span class="evid">EVID<span class="tick" aria-hidden="true">✓</span></span>'
-+ '</span>';
-
+      +   '<span class="verified">מאומת</span>'
+      +   '<span class="evid">EVID<span class="tick" aria-hidden="true">✓</span></span>'
+      + '</span>';
 
     card.appendChild(header); card.appendChild(body); card.appendChild(brand);
     return card;
@@ -170,21 +177,30 @@
     if(!reviews.length) return;
     var card=renderCard(reviews[i % reviews.length]); i++;
     wrap.innerHTML=""; wrap.appendChild(card);
-    setTimeout(function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); }, Math.max(0, SHOW_MS-FADE_MS));
+
+    // fade-out just before end of SHOW_MS, then remove so the GAP_MS is a clean break
+    setTimeout(function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); }, Math.max(0, SHOW_MS - FADE_MS));
+    setTimeout(function(){ if(card && card.parentNode){ card.parentNode.removeChild(card); } }, SHOW_MS);
   }
 
   // Fetch + start
   fetch(endpoint,{method:"GET",credentials:"omit",cache:"no-store"})
-    .then(function(res){ return res.text().then(function(raw){ if(!res.ok) throw new Error(raw || ("HTTP "+res.status)); try{ return JSON.parse(raw);}catch(_){ return {reviews:[{text:raw}]}; } }); })
+    .then(function(res){
+      return res.text().then(function(raw){
+        if(!res.ok) throw new Error(raw || ("HTTP "+res.status));
+        try{ return JSON.parse(raw);}catch(_){ return {reviews:[{text:raw}]}; }
+      });
+    })
     .then(function(data){
       reviews=normalize(data); log("fetched reviews:",reviews.length);
       if(!reviews.length) throw new Error("No reviews returned");
-      i=0; show(); if(loop) clearInterval(loop); loop=setInterval(show, SHOW_MS+GAP_MS);
+      i=0; show(); if(loop) clearInterval(loop); loop=setInterval(show, SHOW_MS + GAP_MS);
     })
     .catch(function(err){
       root.innerHTML =
         '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">'
         + 'Widget error: ' + (err && err.message ? err.message : String(err)) + '</div>';
-      console.error("[reviews-widget v1.9.1]", err);
+      console.error("[reviews-widget v1.9.2]", err);
     });
 })();
+</script>
