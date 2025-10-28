@@ -1,5 +1,5 @@
-// review-widget v2.3.8 — ES5-safe, rotating cards, golden stars, 20-word cap
-// Built-in tiny text badge "מאומת EVID ✓" (no extra embed attributes needed)
+// review-widget v2.3.9 — ES5-safe, 15s show + 6s break, fallback text, 5s initial delay
+// Built-in tiny text badge "מאומת EVID ✓"
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -12,10 +12,12 @@
   var endpoint = scriptEl && scriptEl.getAttribute("data-endpoint");
   var SHOW_MS  = Number((scriptEl && scriptEl.getAttribute("data-show-ms")) || 15000); // default 15s
   var GAP_MS   = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))  || 6000);  // default 6s
+  var INIT_DELAY_MS = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 5000); // default 5s
+  var MAX_WORDS = Number((scriptEl && scriptEl.getAttribute("data-max-words")) || 16); // default 16 words
   var FADE_MS  = 350;
   var DEBUG    = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
 
-  function log(){ if (DEBUG) { var a=["[reviews-widget v2.3.8]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if (DEBUG) { var a=["[reviews-widget v2.3.9]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!endpoint) {
     root.innerHTML =
@@ -42,7 +44,7 @@
     + '.gmark{display:flex;align-items:center;}'
     + '.gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
     + '.badgeText{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.9;}'
-    + '.badgeText .verified{color:#444;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;font-weight:600;}'
+    + '.badgeText .verified{color:#444;font-weight:600;}'
     + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
     + '.badgeText .tick{font-size:12px;line-height:1;}'
     + '.xbtn{appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
@@ -65,6 +67,7 @@
   function truncateWords(s,n){ s=(s||"").replace(/\s+/g," ").trim(); var p=s?s.split(" "):[]; return p.length>n?p.slice(0,n).join(" ")+"…":s; }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
+
   function getPhotoUrl(o){
     if(!o||typeof o!=="object") return "";
     var k=Object.keys(o);
@@ -78,6 +81,17 @@
     }
     return "";
   }
+
+  // Fallback text when a review has no content
+  function defaultText(){
+    var pool = [
+      "שמח שבחרתי בכם",
+      "אהבתי את השירות",
+      "קיבלתי בדיוק מה שביקשתי"
+    ];
+    return pool[Math.floor(Math.random()*pool.length)];
+  }
+
   function normalize(data){
     var arr=[];
     if(Object.prototype.toString.call(data)==="[object Array]") arr=data;
@@ -91,14 +105,17 @@
       else if(data.text||data.Content||data.reviewText||data.content) arr=[data];
     }
     return arr.map(function(x){
+      var raw = (x.text||x.reviewText||x.Content||x.content||"").trim();
+      var text = raw ? raw : defaultText(); // inject fallback when empty
       return {
         authorName: x.authorName||x.userName||x.Header||x.name||x.author||"Anonymous",
-        text:       x.text||x.reviewText||x.Content||x.content||"",
+        text:       text,
         rating:     x.rating||x.stars||x.score||5,
         profilePhotoUrl: x.Photo||x.reviewerPhotoUrl||getPhotoUrl(x)
       };
     });
   }
+
   function renderMonogram(name){
     var d=document.createElement("div");
     d.className="avatar-fallback";
@@ -106,6 +123,7 @@
     d.style.background=colorFromString(name);
     return d;
   }
+
   function renderAvatar(name,url){
     if(url){
       var img=document.createElement("img");
@@ -116,13 +134,17 @@
     }
     return renderMonogram(name);
   }
+
   function renderCard(r){
     var card=document.createElement("div"); card.className="card fade-in";
+
     var header=document.createElement("div"); header.className="row";
     var avatarEl=renderAvatar(r.authorName, r.profilePhotoUrl||r.reviewerPhotoUrl||r.Photo);
+
     var meta=document.createElement("div"); meta.className="meta";
     var name=document.createElement("div"); name.className="name";
     name.textContent=r.authorName||"Anonymous"; meta.appendChild(name);
+
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
     x.addEventListener("click",function(){
       card.classList.remove("fade-in");
@@ -132,10 +154,13 @@
         if(loop){ clearInterval(loop); loop=null; }
       }, FADE_MS);
     });
+
     header.appendChild(avatarEl); header.appendChild(meta); header.appendChild(x);
+
     var body=document.createElement("div");
-    var fullText=r.text||r.content||""; var shortText=truncateWords(fullText,20);
+    var shortText=truncateWords(r.text, MAX_WORDS);
     body.className="body "+scaleClass(shortText); body.textContent=shortText;
+
     var brand=document.createElement("div"); brand.className="brand";
     brand.innerHTML =
         '<span class="gmark" aria-label="Google">'
@@ -151,12 +176,14 @@
       +   '<span class="verified">מאומת</span>'
       +   '<span class="evid">EVID<span class="tick" aria-hidden="true">✓</span></span>'
       + '</span>';
+
     card.appendChild(header); card.appendChild(body); card.appendChild(brand);
     return card;
   }
 
   // Rotation
   var reviews=[]; var i=0; var loop=null;
+
   function show(){
     if(!reviews.length) return;
     var card=renderCard(reviews[i % reviews.length]); i++;
@@ -165,7 +192,8 @@
     setTimeout(function(){ if(card && card.parentNode){ card.parentNode.removeChild(card); } }, SHOW_MS);
   }
 
-  // Fetch + start
+  // Fetch + start (respect a minimum 5s delay before first show)
+  var t0 = Date.now();
   fetch(endpoint,{method:"GET",credentials:"omit",cache:"no-store"})
     .then(function(res){
       return res.text().then(function(raw){
@@ -176,12 +204,18 @@
     .then(function(data){
       reviews=normalize(data); log("fetched reviews:",reviews.length);
       if(!reviews.length) throw new Error("No reviews returned");
-      i=0; show(); if(loop) clearInterval(loop); loop=setInterval(show, SHOW_MS + GAP_MS);
+      var elapsed = Date.now() - t0;
+      var wait = Math.max(0, INIT_DELAY_MS - elapsed);
+      setTimeout(function(){
+        i=0; show();
+        if(loop) clearInterval(loop);
+        loop=setInterval(show, SHOW_MS + GAP_MS);
+      }, wait);
     })
     .catch(function(err){
       root.innerHTML =
         '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">'
         + 'Widget error: ' + (err && err.message ? err.message : String(err)) + '</div>';
-      console.error("[reviews-widget v2.3.8]", err);
+      console.error("[reviews-widget v2.3.9]", err);
     });
 })();
