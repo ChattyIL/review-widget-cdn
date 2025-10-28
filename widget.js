@@ -1,4 +1,4 @@
-// review-widget v1.9.2 — ES5-safe, rotating cards, golden stars, 20-word cap
+// review-widget v2.3.7 — ES5-safe, rotating cards, golden stars, 20-word cap
 // Built-in tiny text badge "מאומת EVID ✓" (no extra embed attributes needed)
 (function () {
   var hostEl = document.getElementById("reviews-widget");
@@ -15,7 +15,7 @@
   var FADE_MS  = 350;
   var DEBUG    = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
 
-  function log(){ if (DEBUG) { var a=["[reviews-widget v1.9.2]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if (DEBUG) { var a=["[reviews-widget v2.3.7]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!endpoint) {
     root.innerHTML =
@@ -38,7 +38,6 @@
     + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;}'
     + '.body.small{font-size:12.5px;}'
     + '.body.tiny{font-size:11.5px;}'
-    /* bottom brand row (Google G + ★★★★★ + tiny badge) */
     + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(0,0,0,.07);font-size:12px;opacity:.95;}'
     + '.gmark{display:flex;align-items:center;}'
     + '.gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
@@ -176,8 +175,7 @@
     if(!reviews.length) return;
     var card=renderCard(reviews[i % reviews.length]); i++;
     wrap.innerHTML=""; wrap.appendChild(card);
-
-    // fade-out just before end of SHOW_MS, then remove so the GAP_MS is a clean break
+    // fade-out just before end of SHOW_MS, then remove so GAP_MS shows a clean empty break
     setTimeout(function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); }, Math.max(0, SHOW_MS - FADE_MS));
     setTimeout(function(){ if(card && card.parentNode){ card.parentNode.removeChild(card); } }, SHOW_MS);
   }
@@ -199,6 +197,6 @@
       root.innerHTML =
         '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">'
         + 'Widget error: ' + (err && err.message ? err.message : String(err)) + '</div>';
-      console.error("[reviews-widget v1.9.2]", err);
+      console.error("[reviews-widget v2.3.7]", err);
     });
 })();
