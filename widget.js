@@ -1,5 +1,5 @@
-// review-widget v2.3.9 — ES5-safe, 15s show + 6s break, fallback text, 5s initial delay
-// Built-in tiny text badge "מאומת EVID ✓"
+// review-widget v2.4.0 — ES5-safe, 5s init delay, 15s show + 6s break
+// Filters OUT reviews without content
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -13,11 +13,11 @@
   var SHOW_MS  = Number((scriptEl && scriptEl.getAttribute("data-show-ms")) || 15000); // default 15s
   var GAP_MS   = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))  || 6000);  // default 6s
   var INIT_DELAY_MS = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 5000); // default 5s
-  var MAX_WORDS = Number((scriptEl && scriptEl.getAttribute("data-max-words")) || 16); // default 16 words
+  var MAX_WORDS = Number((scriptEl && scriptEl.getAttribute("data-max-words")) || 20); // default 20 words
   var FADE_MS  = 350;
   var DEBUG    = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
 
-  function log(){ if (DEBUG) { var a=["[reviews-widget v2.3.9]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if (DEBUG) { var a=["[reviews-widget v2.4.0]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!endpoint) {
     root.innerHTML =
@@ -82,16 +82,7 @@
     return "";
   }
 
-  // Fallback text when a review has no content
-  function defaultText(){
-    var pool = [
-      "שמח שבחרתי בכם",
-      "אהבתי את השירות",
-      "קיבלתי בדיוק מה שביקשתי"
-    ];
-    return pool[Math.floor(Math.random()*pool.length)];
-  }
-
+  // Return ONLY reviews that actually have text
   function normalize(data){
     var arr=[];
     if(Object.prototype.toString.call(data)==="[object Array]") arr=data;
@@ -104,16 +95,22 @@
       else if(Object.prototype.toString.call(data.records)==="[object Array]") arr=data.records;
       else if(data.text||data.Content||data.reviewText||data.content) arr=[data];
     }
-    return arr.map(function(x){
+
+    // map → {authorName, text, ...} BUT drop empty text
+    var cleaned = [];
+    for (var i=0;i<arr.length;i++){
+      var x = arr[i] || {};
       var raw = (x.text||x.reviewText||x.Content||x.content||"").trim();
-      var text = raw ? raw : defaultText(); // inject fallback when empty
-      return {
+      if (!raw) continue; // skip no-content review
+
+      cleaned.push({
         authorName: x.authorName||x.userName||x.Header||x.name||x.author||"Anonymous",
-        text:       text,
+        text:       raw,
         rating:     x.rating||x.stars||x.score||5,
         profilePhotoUrl: x.Photo||x.reviewerPhotoUrl||getPhotoUrl(x)
-      };
-    });
+      });
+    }
+    return cleaned;
   }
 
   function renderMonogram(name){
@@ -168,7 +165,7 @@
       + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path>'
       + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
       + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
-      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
+      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48ל2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64ל3.29 2.56c.77-2.32 2.93-4.7 5.49-4.7z"></path>'
       + '  </svg>'
       + '</span>'
       + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>'
@@ -188,11 +185,20 @@
     if(!reviews.length) return;
     var card=renderCard(reviews[i % reviews.length]); i++;
     wrap.innerHTML=""; wrap.appendChild(card);
-    setTimeout(function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); }, Math.max(0, SHOW_MS - FADE_MS));
-    setTimeout(function(){ if(card && card.parentNode){ card.parentNode.removeChild(card); } }, SHOW_MS);
+
+    // fade out before hide
+    setTimeout(function(){
+      card.classList.remove("fade-in");
+      card.classList.add("fade-out");
+    }, Math.max(0, SHOW_MS - FADE_MS));
+
+    // remove card at SHOW_MS so GAP_MS = empty pause
+    setTimeout(function(){
+      if(card && card.parentNode){ card.parentNode.removeChild(card); }
+    }, SHOW_MS);
   }
 
-  // Fetch + start (respect a minimum 5s delay before first show)
+  // Fetch + start with init delay
   var t0 = Date.now();
   fetch(endpoint,{method:"GET",credentials:"omit",cache:"no-store"})
     .then(function(res){
@@ -202,12 +208,25 @@
       });
     })
     .then(function(data){
-      reviews=normalize(data); log("fetched reviews:",reviews.length);
-      if(!reviews.length) throw new Error("No reviews returned");
+      reviews=normalize(data);
+      log("fetched reviews:",reviews.length);
+
+      // If we filtered everything out (all empty), keep one synthetic message
+      if(!reviews.length){
+        reviews = [{
+          authorName: "Anonymous",
+          text: "שמח שבחרתי בכם",
+          rating: 5,
+          profilePhotoUrl: ""
+        }];
+      }
+
       var elapsed = Date.now() - t0;
       var wait = Math.max(0, INIT_DELAY_MS - elapsed);
+
       setTimeout(function(){
-        i=0; show();
+        i=0;
+        show();
         if(loop) clearInterval(loop);
         loop=setInterval(show, SHOW_MS + GAP_MS);
       }, wait);
@@ -216,6 +235,6 @@
       root.innerHTML =
         '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">'
         + 'Widget error: ' + (err && err.message ? err.message : String(err)) + '</div>';
-      console.error("[reviews-widget v2.3.9]", err);
+      console.error("[reviews-widget v2.4.0]", err);
     });
 })();
