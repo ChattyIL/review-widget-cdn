@@ -1,6 +1,6 @@
-/*! purchase-widget v1.4.0 — ES5-safe, UI matches review widget; shows PRODUCT IMAGE when available */
+/*! purchase-widget v1.6.0 — ES5-safe. Product image, no name line, footer shows relative time. */
 (function () {
-  var hostEl = document.getElementById("reviews-widget"); // same container id
+  var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
 
   var root = hostEl.attachShadow ? hostEl.attachShadow({ mode: "open" }) : hostEl;
@@ -14,10 +14,9 @@
   var INIT_MS   = Number((scriptEl && (scriptEl.getAttribute("data-init-delay-ms") || scriptEl.getAttribute("data-init-ms"))) || 5000);
   var MAX_WORDS = Number((scriptEl && scriptEl.getAttribute("data-max-words")) || 20);
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
-  var /*BADGE*/ _BADGE = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1"); // we always show, to match review widget
   var FADE_MS   = 350;
 
-  function log(){ if (DEBUG) { var a=["[purchase-widget v1.4.0]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if (DEBUG) { var a=["[purchase-widget v1.6.0]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!endpoint) {
     root.innerHTML =
@@ -25,7 +24,7 @@
     return;
   }
 
-  // ===== Styles (identical to review widget + product image class) =====
+  // ===== Styles (matching review widget) =====
   var style = document.createElement("style");
   style.textContent = ''
     + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
@@ -35,24 +34,15 @@
     + '.row{display:grid;grid-template-columns:40px 1fr 24px;gap:10px;align-items:center;padding:12px 12px 8px;}'
     + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#eee;display:block;}'
     + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;}'
-    + '.prodimg{width:40px;height:40px;border-radius:10px;object-fit:cover;background:#eee;display:block;}' /* ← product image */
+    + '.prodimg{width:40px;height:40px;border-radius:10px;object-fit:cover;background:#eee;display:block;}'
     + '.meta{display:flex;flex-direction:column;gap:4px;}'
-    + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
-    + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;}'
-    + '.body.small{font-size:12.5px;}'
-    + '.body.tiny{font-size:11.5px;}'
-    + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(0,0,0,.07);font-size:12px;opacity:.95;}'
-    + '.gmark{display:flex;align-items:center;height:16px;}'
-    + '.gmark svg{display:block;}'
-    + '.gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
-    + '.badgeText{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.9;}'
-    + '.badgeText .verified{color:#444;font-weight:600;}'
-    + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
-    + '.badgeText .tick{font-size:12px;line-height:1;}'
+    + '.ptext{font-size:14px;line-height:1.2;}' /* sentence next to the image */
+    + '.body{display:none;}' /* no second text block for purchases */
+    + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(0,0,0,.07);font-size:12px;opacity:.95;color:#475569;}'
+    + '.timeago{white-space:nowrap;}'
     + '.xbtn{appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
     + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;}'
     + '.xbtn:active{transform:translateY(0);}'
-    + '.stars{display:none!important;}'
     + '.fade-in{animation:fadeIn .35s ease forwards;}'
     + '.fade-out{animation:fadeOut .35s ease forwards;}'
     + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
@@ -64,11 +54,20 @@
   wrap.className = "wrap";
   root.appendChild(wrap);
 
-  // ===== Helpers (incl. product image detection) =====
+  // ===== Helpers =====
   function truncateWords(s,n){ s=(s||"").replace(/\s+/g," ").trim(); var p=s?s.split(" "):[]; return p.length>n?p.slice(0,n).join(" ")+"…":s; }
-  function scaleClass(t){ t=(t||"").trim(); var L=t.length; if(L>220) return "tiny"; if(L>140) return "small"; return ""; }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
+  function timeAgo(ts){
+    try{
+      var d=new Date(ts); var diff=Math.max(0,(Date.now()-d.getTime())/1000);
+      var m=Math.floor(diff/60), h=Math.floor(m/60), dd=Math.floor(h/24);
+      if(dd>0) return dd===1?"אתמול":"לפני "+dd+" ימים";
+      if(h>0)  return "לפני "+h+" שעות";
+      if(m>0)  return "לפני "+m+" דקות";
+      return "כרגע";
+    }catch(_){ return ""; }
+  }
 
   function getPhotoUrl(o){
     if(!o||typeof o!=="object") return "";
@@ -77,7 +76,7 @@
       var n=k[i], ln=n.toLowerCase();
       if(ln==="photo"||ln==="reviewerphotourl"||ln==="profilephotourl"||ln==="profile_photo_url"||
          ln==="photourl"||ln==="image"||ln==="imageurl"||ln==="avatar"||ln==="avatarurl"){
-        var v = (o[n]==null?"":String(o[n])).trim();
+        var v=(o[n]==null?"":String(o[n])).trim();
         if(v) return v;
       }
     }
@@ -85,18 +84,11 @@
   }
   function getProductImage(o){
     if(!o||typeof o!=="object") return "";
-    var keys = [
-      "productImage","product_image","productImageUrl","product_image_url",
-      "productPhotoUrl","productPhoto","image","imageUrl","image_url","picture","photoUrl","photo"
-    ];
-    for (var i=0;i<keys.length;i++){
-      var k = keys[i];
-      if (o[k]!=null && String(o[k]).trim()) return String(o[k]).trim();
-    }
-    // nested product.{image,imageUrl}
-    if (o.product && typeof o.product==="object") {
-      if (o.product.image) return String(o.product.image).trim();
-      if (o.product.imageUrl) return String(o.product.imageUrl).trim();
+    var keys=["productImage","product_image","productImageUrl","product_image_url","productPhotoUrl","productPhoto","image","imageUrl","image_url","picture","photoUrl","photo"];
+    for(var i=0;i<keys.length;i++){ var k=keys[i]; if(o[k]!=null && String(o[k]).trim()) return String(o[k]).trim(); }
+    if(o.product && typeof o.product==="object"){
+      if(o.product.image) return String(o.product.image).trim();
+      if(o.product.imageUrl) return String(o.product.imageUrl).trim();
     }
     return "";
   }
@@ -121,26 +113,28 @@
     return null;
   }
 
-  // Accept modern or legacy shapes; attach productImageUrl
+  // Normalize → {buyer, product, text, productImageUrl, profilePhotoUrl, purchased_at}
   function normalize(data){
-    var arr=[]; if(Object.prototype.toString.call(data)==="[object Array]") arr=data;
+    var arr=[];
+    if(Object.prototype.toString.call(data)==="[object Array]") arr=data;
     else if(data&&typeof data==="object"){
-      if(Object.prototype.toString.call(data.items)==="[object Array]") arr=data.items;
+      if(Object.prototype.toString.call(data.items)==="[object Array]")   arr=data.items;
       else if(Object.prototype.toString.call(data.data)==="[object Array]") arr=data.data;
       else if(Object.prototype.toString.call(data.results)==="[object Array]") arr=data.results;
       else if(Object.prototype.toString.call(data.records)==="[object Array]") arr=data.records;
-      else if(data.text||data.note||data.productName||data.product||data.item) arr=[data];
+      else if(data.productName||data.product||data.item||data.text||data.note) arr=[data];
     }
     return arr.map(function(x){
-      var buyer   = x.buyerName||x.customerName||x.name||x.customer||x.buyer||"לקוח";
+      var buyer   = x.buyerName||x.customerName||x.name||x.customer||x.buyer||"נועה"; // ← default buyer
       var product = x.productName||x.item||x.title||x.product||"מוצר";
-      var text    = (x.text||x.note||("לקוח רכש: " + product));
+      var text    = buyer + " רכשה " + product; // ← default sentence
       return {
-        authorName: buyer,
+        buyer: buyer,
+        product: product,
         text: text,
         productImageUrl: getProductImage(x),
         profilePhotoUrl: x.Photo||x.avatar||getPhotoUrl(x),
-        product: product
+        purchased_at: x.purchased_at||x.purchasedAt||x.ts||x.timestamp||x.time||x.date||new Date().toISOString()
       };
     });
   }
@@ -149,38 +143,24 @@
     var card=document.createElement("div"); card.className="card fade-in";
     var header=document.createElement("div"); header.className="row";
 
-    var left = renderProductImage(p.productImageUrl, p.product) || renderAvatar(p.authorName, p.profilePhotoUrl);
+    var left = renderProductImage(p.productImageUrl, p.product) || renderAvatar(p.buyer, p.profilePhotoUrl);
     var meta=document.createElement("div"); meta.className="meta";
-    var name=document.createElement("div"); name.className="name"; name.textContent=p.authorName||"לקוח";
-
-    meta.appendChild(name);
+    var line=document.createElement("div"); line.className="ptext";
+    var sentence = truncateWords(p.text, MAX_WORDS);
+    line.textContent = sentence;
 
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","סגירה"); x.textContent="×";
     x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ card.remove(); if(loop){ clearInterval(loop); loop=null; } }, FADE_MS); });
 
+    meta.appendChild(line);
     header.appendChild(left); header.appendChild(meta); header.appendChild(x);
 
-    var body=document.createElement("div");
-    var shortText=truncateWords(p.text, MAX_WORDS);
-    body.className="body "+scaleClass(shortText); body.textContent=shortText;
-
+    // footer shows only the relative time
     var brand=document.createElement("div"); brand.className="brand";
-    brand.innerHTML =
-      '<span class="gmark" aria-label="Google">'
-    + '  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">'
-    + '    <path fill="#4285F4" d="M21.35 11.1H12v2.98h5.55c-.24 1.26-.95 2.33-2.01 3.04v2.52h3.2c1.9-1.72 2.99-4.25 2.99-7.27 0-.7-.06-1.37-.18-2.01z"></path>'
-    + '    <path fill="#34A853" d="M12 22c2.67 0 4.9-.88 6.54-2.36l-3.2-2.52c-.9.6-2.04.95-3.34.95-2.56 0-4.73-1.73-5.5-4.05H3.4v2.56C5.14 20.65 8.32 22 12 22z"></path>'
-    + '    <path fill="#FBBC05" d="M6.5 14.02c-.18-.55-.28-1.14-.28-1.74s.1-1.19.28-1.74V7.64H3.4a9.99 9.99 0 0 0 0 8.72h3.1V14.02z"></path>'
-    + '    <path fill="#EA4335" d="M12 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12 2C8.22 2 5 4.17 3.22 7.64l3.1 2.56C7.1 7.88 9.26 5.5 12 5.5z"></path>'
-    + '  </svg>'
-    + '</span>'
-    + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>'
-    + '<span class="badgeText" aria-label="Verified by Evid">'
-    + '  <span class="verified">מאומת</span>'
-    + '  <span class="evid">EVID<span class="tick" aria-hidden="true">✓</span></span>'
-    + '</span>';
+    var tm=document.createElement("span"); tm.className="timeago"; tm.textContent=timeAgo(p.purchased_at);
+    brand.appendChild(tm);
 
-    card.appendChild(header); card.appendChild(body); card.appendChild(brand);
+    card.appendChild(header); card.appendChild(brand);
     return card;
   }
 
