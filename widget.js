@@ -64,6 +64,7 @@
     + '  .badgeText{font-size:11px;}'
     + '  .gstars{font-size:12px;}'
     + '}'
+    
   ;
   root.appendChild(style);
 
@@ -78,27 +79,30 @@
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
 
   // Avatar: show monogram immediately, swap in image only after it loads
-  function renderAvatarLazy(name,url){
-    var slot = document.createElement("div");
-    slot.className = "avatar-slot";
-    var mono = document.createElement("div");
-    mono.className = "avatar-fallback";
-    mono.textContent = firstLetter(name);
-    mono.style.background = colorFromString(name);
-    slot.appendChild(mono);
-
-    if (url) {
-      var im = new Image();
-      im.decoding = "async";
-      im.loading  = "eager";
-      im.className = "avatar";
-      im.alt = "";
-      im.onload = function(){ slot.replaceChild(im, mono); };
-      im.onerror = function(){ /* keep monogram */ };
-      im.src = url;
-    }
-    return slot;
+  function renderAvatar(name,url){
+  var shell = (function(){
+    var d=document.createElement("div");
+    d.className="avatar-fallback";
+    d.textContent=(name||"?").trim().charAt(0).toUpperCase()||"?";
+    // simple color
+    var s=name||"", h=0; for(var i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0;
+    d.style.background="hsl("+(h%360)+" 70% 45%)";
+    return d;
+  })();
+  if(url){
+    var pre = new Image();
+    pre.width=40; pre.height=40; pre.decoding="async"; pre.loading="eager";
+    pre.onload=function(){
+      var img=document.createElement("img");
+      img.className="avatar"; img.alt=""; img.width=40; img.height=40; img.decoding="async"; img.loading="eager"; img.src=url;
+      shell.replaceWith(img);
+    };
+    pre.onerror=function(){ /* keep monogram */ };
+    pre.src=url;
   }
+  return shell;
+}
+
 
   // Prewarm a few upcoming avatar URLs to reduce flashes
   function prefetchUrls(arr){
