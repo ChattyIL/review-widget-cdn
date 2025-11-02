@@ -1,6 +1,4 @@
-// both-controller v3.4.1 — ES5-safe, alternates reviews & purchases.
-// Purchases: product image, sentence in top row ("נועה רכשה …"), footer shows relative time.
-// Reviews: MATCHES SOLO REVIEW WIDGET (no "ביקורת לקוח" subtitle).
+// both-controller v3.3.0 — parity with review widget, lazy avatars, mobile-compact, desktop bigger product pic
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -12,23 +10,21 @@
   var REVIEWS_EP   = scriptEl && scriptEl.getAttribute("data-reviews-endpoint");
   var PURCHASES_EP = scriptEl && scriptEl.getAttribute("data-purchases-endpoint");
 
-  var SHOW_MS   = Number((scriptEl && scriptEl.getAttribute("data-show-ms"))       || 15000);
-  var GAP_MS    = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))        || 6000);
-  var INIT_MS   = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
-  var MAX_WORDS = Number((scriptEl && scriptEl.getAttribute("data-max-words"))     || 20);
-  var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
-  var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
-  var FADE_MS   = 350;
+  var SHOW_MS      = Number((scriptEl && scriptEl.getAttribute("data-show-ms"))       || 15000);
+  var GAP_MS       = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))        || 6000);
+  var INIT_MS      = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
+  var MAX_WORDS    = Number((scriptEl && scriptEl.getAttribute("data-max-words"))     || 20);
+  var DEBUG        = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
+  var BADGE        = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
 
-  function log(){ if (DEBUG) { var a=["[both-controller v3.4.1]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if (DEBUG) { var a=["[both-controller v3.3.0]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!REVIEWS_EP && !PURCHASES_EP) {
     root.innerHTML =
-      '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Missing <code>data-reviews-endpoint</code> and/or <code>data-purchases-endpoint</code>.</div>';
+      '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Missing <code>data-reviews-endpoint</code> and <code>data-purchases-endpoint</code>.</div>';
     return;
   }
 
-  // ---- styles ----
   var style = document.createElement("style");
   style.textContent = ''
     + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
@@ -36,18 +32,17 @@
     + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}'
     + '.card{width:320px;max-width:88vw;background:#fff;color:#0b1220;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);border:1px solid rgba(0,0,0,.06);overflow:hidden;direction:auto;}'
     + '.row{display:grid;grid-template-columns:40px 1fr 24px;gap:10px;align-items:center;padding:12px 12px 8px;}'
-    + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#eee;display:block;}'
-    + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;}'
-    + '.prodimg{width:40px;height:40px;border-radius:10px;object-fit:cover;background:#eee;display:block;}'
+    + '.avatar-slot{width:40px;height:40px;border-radius:50%;overflow:hidden;display:block;background:#eee;}'
+    + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;display:block;}'
+    + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;font-size:14px;}'
     + '.meta{display:flex;flex-direction:column;gap:4px;}'
-    + '.ptext{font-size:14px;line-height:1.2;}' /* purchases sentence in header */
-    + '.name{font-weight:700;font-size:14px;line-height:1.2;}' /* reviews name only (like solo review) */
+    + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
+    + '.subtitle{display:none;}'
     + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;}'
     + '.body.small{font-size:12.5px;}'
     + '.body.tiny{font-size:11.5px;}'
     + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(0,0,0,.07);font-size:12px;opacity:.95;}'
-    + '.timeago{color:#475569;white-space:nowrap;}' /* purchases footer time */
-    + '.gmark{display:flex;align-items:center;}'
+    + '.gmark{display:flex;align-items:center;} .gmark svg{display:block;}'
     + '.gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
     + '.badgeText{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.9;}'
     + '.badgeText .verified{color:#444;font-weight:600;}'
@@ -60,6 +55,21 @@
     + '.fade-out{animation:fadeOut .35s ease forwards;}'
     + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
     + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
+
+    // Desktop: bigger “purchase” picture when that layout is used
+    + '.pic-slot{width:56px;height:56px;border-radius:10px;overflow:hidden;background:#e2e8f0;display:none;}'
+    + '.prod{display:none;}'
+    + '@media (min-width:900px){ .prod{display:block;} .pic-slot{display:block;width:72px;height:72px;border-radius:12px;} }'
+
+    // Mobile compact height
+    + '@media (max-width:480px){'
+    + '  .row{grid-template-columns:34px 1fr 22px;gap:8px;padding:10px 10px 6px;}'
+    + '  .avatar-slot,.avatar,.avatar-fallback{width:34px;height:34px;font-size:13px;}'
+    + '  .name{font-size:13px;}'
+    + '  .body{font-size:13px;line-height:1.3;padding:0 10px 10px;}'
+    + '  .badgeText{font-size:11px;}'
+    + '  .gstars{font-size:12px;}'
+    + '}'
   ;
   root.appendChild(style);
 
@@ -67,23 +77,23 @@
   wrap.className = "wrap";
   root.appendChild(wrap);
 
-  // ---- helpers ----
+  // helpers
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
-  function renderMonogram(name){ var d=document.createElement("div"); d.className="avatar-fallback"; d.textContent=firstLetter(name); d.style.background=colorFromString(name); return d; }
+  function renderAvatarLazy(name,url){
+    var slot = document.createElement("div"); slot.className="avatar-slot";
+    var mono = document.createElement("div"); mono.className="avatar-fallback";
+    mono.textContent=firstLetter(name); mono.style.background=colorFromString(name);
+    slot.appendChild(mono);
+    if (url){
+      var im=new Image(); im.decoding="async"; im.loading="eager"; im.className="avatar"; im.alt="";
+      im.onload=function(){ slot.replaceChild(im, mono); }; im.onerror=function(){};
+      im.src=url;
+    }
+    return slot;
+  }
   function truncateWords(s,n){ s=(s||"").replace(/\s+/g," ").trim(); var p=s?s.split(" "):[]; return p.length>n?p.slice(0,n).join(" ")+"…":s; }
   function scaleClass(text){ var t=(text||"").trim(), L=t.length; if(L>220) return "tiny"; if(L>140) return "small"; return ""; }
-  function timeAgo(ts){
-    try{
-      var d=new Date(ts); var diff=Math.max(0,(Date.now()-d.getTime())/1000);
-      var m=Math.floor(diff/60), h=Math.floor(m/60), dd=Math.floor(h/24);
-      if(dd>0) return dd===1?"אתמול":"לפני "+dd+" ימים";
-      if(h>0)  return "לפני "+h+" שעות";
-      if(m>0)  return "לפני "+m+" דקות";
-      return "כרגע";
-    }catch(_){ return ""; }
-  }
-
   function getPhotoUrl(o){
     if(!o||typeof o!=="object") return "";
     var k=Object.keys(o);
@@ -91,60 +101,46 @@
       var n=k[i], ln=n.toLowerCase();
       if(ln==="photo"||ln==="reviewerphotourl"||ln==="profilephotourl"||ln==="profile_photo_url"||
          ln==="photourl"||ln==="image"||ln==="imageurl"||ln==="avatar"||ln==="avatarurl"){
-        var v=(o[n]==null?"":String(o[n])).trim();
+        var v = (o[n]==null?"":String(o[n])).trim();
         if(v) return v;
       }
     }
     return "";
   }
-  function getProductImage(o){
-    if(!o||typeof o!=="object") return "";
-    var keys=["productImage","product_image","productImageUrl","product_image_url","productPhotoUrl","productPhoto","image","imageUrl","image_url","picture","photoUrl","photo"];
-    for(var i=0;i<keys.length;i++){ var k=keys[i]; if(o[k]!=null && String(o[k]).trim()) return String(o[k]).trim(); }
-    if(o.product && typeof o.product==="object"){
-      if(o.product.image) return String(o.product.image).trim();
-      if(o.product.imageUrl) return String(o.product.imageUrl).trim();
-    }
-    return "";
-  }
-  function renderAvatar(name,url){
-    if(url){
-      var img=document.createElement("img");
-      img.className="avatar"; img.alt=""; img.width=40; img.height=40; img.decoding="async"; img.loading="eager"; img.src=url;
-      img.addEventListener("error",function(){ img.replaceWith(renderMonogram(name)); });
-      return img;
-    }
-    return renderMonogram(name);
-  }
-  function renderThumb(item){
-    if (item.kind==="purchase" && item.productImageUrl){
-      var im=document.createElement("img");
-      im.className="prodimg"; im.alt=""; im.width=40; im.height=40; im.decoding="async"; im.loading="eager"; im.src=item.productImageUrl;
-      im.addEventListener("error",function(){ im.replaceWith(renderAvatar(item.authorName, item.profilePhotoUrl)); });
-      return im;
-    }
-    return renderAvatar(item.authorName, item.profilePhotoUrl);
-  }
 
-  // Normalize
   function normReview(x){
-    var raw = (x.text||x.reviewText||x.Content||x.content||"").trim();
-    return { kind:"review", authorName:x.authorName||x.userName||x.Header||x.name||x.author||"Anonymous", text:raw, rating:x.rating||x.stars||x.score||5, profilePhotoUrl:x.Photo||x.reviewerPhotoUrl||getPhotoUrl(x) };
-  }
-  function normPurchase(x){
-    var buyer   = x.buyerName||x.customerName||x.name||x.customer||x.buyer||"נועה"; // default buyer
-    var product = x.productName||x.item||x.title||x.product||"מוצר";
-    var text    = buyer + " רכשה " + product; // default sentence
     return {
-      kind:"purchase",
-      authorName: buyer,
-      text: text,
-      rating: 5,
-      profilePhotoUrl: x.Photo||x.avatar||getPhotoUrl(x),
-      productImageUrl: getProductImage(x),
-      purchased_at: x.purchased_at||x.purchasedAt||x.ts||x.timestamp||x.time||x.date||new Date().toISOString()
+      kind: "review",
+      authorName: x.authorName||x.userName||x.Header||x.name||x.author||"Anonymous",
+      text:       x.text||x.reviewText||x.Content||x.content||"",
+      rating:     x.rating||x.stars||x.score||5,
+      profilePhotoUrl: x.Photo||x.reviewerPhotoUrl||getPhotoUrl(x)
     };
   }
+  function normPurchase(x){
+    var buyer = x.buyerName||x.customerName||x.buyer||x.name||x.customer||"לקוח/ה";
+    var product = x.productName||x.item||x.title||x.product||"מוצר";
+    var when = x.purchased_at||x.time||x.ts||new Date().toISOString();
+    return {
+      kind: "purchase",
+      authorName: buyer,
+      text: buyer + " רכש/ה " + product,
+      rating: 5,
+      profilePhotoUrl: x.Photo||x.avatar||getPhotoUrl(x),
+      productImage: x.productImage||x.image||"",
+      purchased_at: when
+    };
+  }
+  function timeAgo(ts){
+    try{ var d=new Date(ts); var diff=Math.max(0,(Date.now()-d.getTime())/1000);
+      var m=Math.floor(diff/60), h=Math.floor(m/60), d2=Math.floor(h/24);
+      if (d2>0) return d2===1?"אתמול":"לפני "+d2+" ימים";
+      if (h>0)  return "לפני "+h+" שעות";
+      if (m>0)  return "לפני "+m+" דקות";
+      return "כרגע";
+    }catch(_){ return ""; }
+  }
+
   function normalizeArray(data, as){
     var arr=[];
     if(Object.prototype.toString.call(data)==="[object Array]") arr=data;
@@ -154,65 +150,72 @@
       else if(Object.prototype.toString.call(data.results)==="[object Array]") arr=data.results;
       else if(Object.prototype.toString.call(data.records)==="[object Array]") arr=data.records;
       else if(Object.prototype.toString.call(data.reviews)==="[object Array]") arr=data.reviews;
-      else if(data.text||data.Content||data.reviewText||data.content||data.note||data.productName) arr=[data];
+      else if(data.text||data.Content||data.reviewText||data.content) arr=[data];
     }
-    return (as==="review" ? arr.map(normReview) : arr.map(normPurchase));
+    if(as==="review")  return arr.map(normReview);
+    if(as==="purchase")return arr.map(normPurchase);
+    return arr;
+  }
+
+  function renderPurchaseFooter(when){
+    var brand=document.createElement("div"); brand.className="brand";
+    brand.textContent = timeAgo(when);
+    return brand;
   }
 
   function renderCard(item){
     var card=document.createElement("div"); card.className="card fade-in";
+
     var header=document.createElement("div"); header.className="row";
 
-    var left = renderThumb(item);
-    var meta=document.createElement("div"); meta.className="meta";
-    var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
-    x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, FADE_MS); });
-
-    // PURCHASES: sentence in header; REVIEWS: name + body below (no subtitle).
-    if (item.kind === "purchase") {
-      var line=document.createElement("div"); line.className="ptext";
-      var shortText = truncateWords(item.text, MAX_WORDS);
-      line.textContent = shortText;
-      meta.appendChild(line);
-
-      header.appendChild(left); header.appendChild(meta); header.appendChild(x);
-
-      var brand=document.createElement("div"); brand.className="brand";
-      var tm=document.createElement("span"); tm.className="timeago"; tm.textContent=timeAgo(item.purchased_at);
-      brand.appendChild(tm);
-
-      card.appendChild(header); card.appendChild(brand);
-      return card;
+    // For purchases (desktop), optionally show product image square at the left
+    var prodSlot=null;
+    if (item.kind==="purchase"){
+      prodSlot=document.createElement("div"); prodSlot.className="pic-slot prod";
+      if (item.productImage){
+        var im=new Image(); im.decoding="async"; im.loading="eager"; im.alt=""; im.style.width="100%"; im.style.height="100%"; im.style.objectFit="cover";
+        im.onload=function(){ prodSlot.innerHTML=""; prodSlot.appendChild(im); };
+        im.onerror=function(){ prodSlot.style.background="#e2e8f0"; };
+        im.src=item.productImage;
+      }
     }
 
-    // REVIEW branch (identical to solo review widget header: just the name)
-    var name=document.createElement("div"); name.className="name";
-    name.textContent=item.authorName||"Anonymous"; meta.appendChild(name);
+    var avatarEl=renderAvatarLazy(item.authorName, item.profilePhotoUrl);
 
-    header.appendChild(left); header.appendChild(meta); header.appendChild(x);
+    var meta=document.createElement("div"); meta.className="meta";
+    var name=document.createElement("div"); name.className="name";
+    name.textContent=item.kind==="purchase" ? (item.authorName + " רכש/ה " + (item.product||"")) : (item.authorName||"Anonymous");
+    meta.appendChild(name);
+
+    var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
+    x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
+
+    if (item.kind==="purchase" && prodSlot){ header.appendChild(prodSlot); }
+    header.appendChild(avatarEl); header.appendChild(meta); header.appendChild(x);
 
     var body=document.createElement("div");
-    var short=truncateWords(item.text, MAX_WORDS);
-    body.className="body "+scaleClass(short); body.textContent=short;
+    var textForReview = truncateWords(item.text, MAX_WORDS);
+    body.className="body "+(item.kind==="purchase" ? "" : scaleClass(textForReview));
+    body.textContent = (item.kind==="purchase" ? "" : textForReview); // purchases show text in title; footer shows time
 
-    var brand=document.createElement("div"); brand.className="brand";
-    var footer = ''
-      + '<span class="gmark" aria-label="Google">'
-      + '  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">'
-      + '    <path fill="#4285F4" d="M21.35 11.1H12v2.98h5.55c-.24 1.26-.95 2.33-2.01 3.04v2.52h3.2c1.9-1.72 2.99-4.25 2.99-7.27 0-.7-.06-1.37-.18-2.01z"></path>'
-      + '    <path fill="#34A853" d="M12 22c2.67 0 4.9-.88 6.54-2.36l-3.2-2.52c-.9.6-2.04.95-3.34.95-2.56 0-4.73-1.73-5.5-4.05H3.4v2.56C5.14 20.65 8.32 22 12 22z"></path>'
-      + '    <path fill="#FBBC05" d="M6.5 14.02c-.18-.55-.28-1.14-.28-1.74s.1-1.19.28-1.74V7.64H3.4a9.99 9.99 0 0 0 0 8.72h3.1V14.02z"></path>'
-      + '    <path fill="#EA4335" d="M12 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12 2C8.22 2 5 4.17 3.22 7.64l3.1 2.56C7.1 7.88 9.26 5.5 12 5.5z"></path>'
-      + '  </svg>'
-      + '</span>'
-      + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>';
-    if (BADGE) {
-      footer += '<span class="badgeText" aria-label="Verified by Evid">'
-             +  '<span class="verified">מאומת</span>'
-             +  '<span class="evid">EVID<span class="tick" aria-hidden="true">✓</span></span>'
-             +  '</span>';
+    var brand;
+    if (item.kind==="purchase"){
+      brand = renderPurchaseFooter(item.purchased_at);
+    } else {
+      brand = document.createElement("div"); brand.className="brand";
+      var footer = ''
+        + '<span class="gmark" aria-label="Google">'
+        + '  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">'
+        + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path>'
+        + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
+        + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
+        + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
+        + '  </svg>'
+        + '</span>'
+        + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>';
+      if (BADGE) { footer += '<span class="badgeText" aria-label="Verified by Evid"><span class="verified">מאומת</span><span class="evid">EVID<span class="tick" aria-hidden="true">✓</span></span></span>'; }
+      brand.innerHTML = footer;
     }
-    brand.innerHTML = footer;
 
     card.appendChild(header); card.appendChild(body); card.appendChild(brand);
     return card;
@@ -228,35 +231,39 @@
   }
 
   var items=[], idx=0, loop=null;
-  function showNext(){ if(!items.length) return;
+
+  function showNext(){
+    if(!items.length) return;
     var card=renderCard(items[idx % items.length]); idx++;
     wrap.innerHTML=""; wrap.appendChild(card);
-    setTimeout(function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); }, Math.max(0, SHOW_MS - FADE_MS));
+    setTimeout(function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); }, Math.max(0, SHOW_MS - 350));
     setTimeout(function(){ if(card && card.parentNode){ card.parentNode.removeChild(card); } }, SHOW_MS);
   }
   function start(){
     if(loop) clearInterval(loop);
-    if(!items.length){ root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">No items to display.</div>'; return; }
+    if(!items.length){
+      root.innerHTML =
+        '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">No items to display.</div>';
+      return;
+    }
     if (INIT_MS > 0) { setTimeout(function(){ showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS); }, INIT_MS); }
     else { showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS); }
   }
 
-  function fetchText(url){ return fetch(url,{method:"GET",credentials:"omit",cache:"no-store"}).then(function(res){ return res.text().then(function(raw){ if(!res.ok) throw new Error(raw || ("HTTP "+res.status)); return raw; }); }); }
+  function fetchText(url){ return fetch(url, {method:"GET", credentials:"omit", cache:"no-store"}).then(function(res){ return res.text().then(function(raw){ if(!res.ok) throw new Error(raw || ("HTTP "+res.status)); return raw; }); }); }
   function fetchJSON(url){ return fetchText(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } }); }
 
   function loadAll(){
-    var p1 = REVIEWS_EP   ? fetchJSON(REVIEWS_EP).then(function(d){ return normalizeArray(d,"review");   }).catch(function(e){ log("reviews fetch err:", e); return []; }) : Promise.resolve([]);
-    var p2 = PURCHASES_EP ? fetchJSON(PURCHASES_EP).then(function(d){ return normalizeArray(d,"purchase");}).catch(function(e){ log("purchases fetch err:", e); return []; }) : Promise.resolve([]);
+    var p1 = REVIEWS_EP   ? fetchJSON(REVIEWS_EP).then(function(d){ return normalizeArray(d,"review"); })    .catch(function(e){ log("reviews fetch err:", e); return []; }) : Promise.resolve([]);
+    var p2 = PURCHASES_EP ? fetchJSON(PURCHASES_EP).then(function(d){ return normalizeArray(d,"purchase"); }).catch(function(e){ log("purchases fetch err:", e); return []; }) : Promise.resolve([]);
     Promise.all([p1,p2]).then(function(r){
-      var rev = (r[0]||[]).filter(function(x){ return (x.text||"").trim(); });
-      var pur = r[1]||[];
-      log("counts:", rev.length, pur.length);
+      var rev = r[0]||[], pur = r[1]||[];
       items = interleave(rev, pur);
       start();
     }).catch(function(e){
       root.innerHTML =
         '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Widget error: '+ String(e && e.message || e) +'</div>';
-      console.error("[both-controller v3.4.1]", e);
+      console.error("[both-controller v3.3.0]", e);
     });
   }
 
