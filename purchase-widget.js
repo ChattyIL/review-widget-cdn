@@ -1,5 +1,3 @@
-<!-- /purchase-widget.js -->
-<script>
 /*! purchase-widget v1.0 — ES5-safe, 5s init delay, 15s show + 6s break */
 (function () {
   var hostEl = document.getElementById("purchases-widget");
@@ -146,4 +144,3 @@
       });
   }, INIT_DELAY);
 })();
-</script>
