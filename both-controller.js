@@ -1,6 +1,6 @@
-// both-controller v3.4.0 — ES5-safe, alternates reviews & purchases.
+// both-controller v3.4.1 — ES5-safe, alternates reviews & purchases.
 // Purchases: product image, sentence in top row ("נועה רכשה …"), footer shows relative time.
-// Reviews: unchanged (Google + stars + badge).
+// Reviews: MATCHES SOLO REVIEW WIDGET (no "ביקורת לקוח" subtitle).
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -20,7 +20,7 @@
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
   var FADE_MS   = 350;
 
-  function log(){ if (DEBUG) { var a=["[both-controller v3.4.0]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if (DEBUG) { var a=["[both-controller v3.4.1]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!REVIEWS_EP && !PURCHASES_EP) {
     root.innerHTML =
@@ -41,8 +41,7 @@
     + '.prodimg{width:40px;height:40px;border-radius:10px;object-fit:cover;background:#eee;display:block;}'
     + '.meta{display:flex;flex-direction:column;gap:4px;}'
     + '.ptext{font-size:14px;line-height:1.2;}' /* purchases sentence in header */
-    + '.name{font-weight:700;font-size:14px;line-height:1.2;}' /* reviews only */
-    + '.subtitle{font-size:12px;opacity:.8;}' /* reviews only */
+    + '.name{font-weight:700;font-size:14px;line-height:1.2;}' /* reviews name only (like solo review) */
     + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;}'
     + '.body.small{font-size:12.5px;}'
     + '.body.tiny{font-size:11.5px;}'
@@ -169,9 +168,7 @@
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
     x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, FADE_MS); });
 
-    // PURCHASES: sentence in header; REVIEWS: name + body below
-    var body=null, brand=null;
-
+    // PURCHASES: sentence in header; REVIEWS: name + body below (no subtitle).
     if (item.kind === "purchase") {
       var line=document.createElement("div"); line.className="ptext";
       var shortText = truncateWords(item.text, MAX_WORDS);
@@ -180,24 +177,25 @@
 
       header.appendChild(left); header.appendChild(meta); header.appendChild(x);
 
-      brand=document.createElement("div"); brand.className="brand";
+      var brand=document.createElement("div"); brand.className="brand";
       var tm=document.createElement("span"); tm.className="timeago"; tm.textContent=timeAgo(item.purchased_at);
       brand.appendChild(tm);
+
       card.appendChild(header); card.appendChild(brand);
       return card;
     }
 
-    // REVIEW branch (unchanged)
+    // REVIEW branch (identical to solo review widget header: just the name)
     var name=document.createElement("div"); name.className="name";
     name.textContent=item.authorName||"Anonymous"; meta.appendChild(name);
-    var subt=document.createElement("div"); subt.className="subtitle"; subt.textContent="ביקורת לקוח"; meta.appendChild(subt);
+
     header.appendChild(left); header.appendChild(meta); header.appendChild(x);
 
-    body=document.createElement("div");
+    var body=document.createElement("div");
     var short=truncateWords(item.text, MAX_WORDS);
     body.className="body "+scaleClass(short); body.textContent=short;
 
-    brand=document.createElement("div"); brand.className="brand";
+    var brand=document.createElement("div"); brand.className="brand";
     var footer = ''
       + '<span class="gmark" aria-label="Google">'
       + '  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">'
@@ -258,7 +256,7 @@
     }).catch(function(e){
       root.innerHTML =
         '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Widget error: '+ String(e && e.message || e) +'</div>';
-      console.error("[both-controller v3.4.0]", e);
+      console.error("[both-controller v3.4.1]", e);
     });
   }
 
