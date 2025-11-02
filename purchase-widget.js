@@ -1,4 +1,4 @@
-/*! purchase-widget v3.3.1 — ES5-safe, product image on the RIGHT, buyer inline, time in footer */
+/*! purchase-widget v3.3.2 — ES5-safe, product image on RIGHT, buyer inline, time in footer, no-referrer */
 (function () {
   var hostEl = document.getElementById("purchases-widget") || document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -7,22 +7,18 @@
   var scripts = document.scripts;
   var scriptEl = document.currentScript || scripts[scripts.length - 1];
 
-  // Config from embed
   var endpoint   = scriptEl && scriptEl.getAttribute("data-endpoint");
   var SHOW_MS    = Number((scriptEl && scriptEl.getAttribute("data-show-ms")) || 15000);
   var GAP_MS     = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))  || 6000);
   var INIT_MS    = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
   var DEBUG      = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
-
-  function log(){ if (DEBUG) { var a=["[purchase-widget v3.3.1]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if (DEBUG) { var a=["[purchase-widget v3.3.2]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!endpoint) {
-    root.innerHTML =
-      '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Missing <code>data-endpoint</code> on widget script.</div>';
+    root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Missing <code>data-endpoint</code> on widget script.</div>';
     return;
   }
 
-  // Styles (match your review card; image bigger on desktop; RTL; image on RIGHT)
   var style = document.createElement("style");
   style.textContent = ''
     + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
@@ -45,40 +41,15 @@
   ;
   root.appendChild(style);
 
-  var wrap = document.createElement("div");
-  wrap.className = "wrap";
-  root.appendChild(wrap);
+  var wrap = document.createElement("div"); wrap.className = "wrap"; root.appendChild(wrap);
 
-  // Helpers
-  function timeAgo(ts){
-    try{
-      var d=new Date(ts); var diff=Math.max(0,(Date.now()-d.getTime())/1000);
-      var m=Math.floor(diff/60), h=Math.floor(m/60), d2=Math.floor(h/24);
-      if(d2>0) return d2===1?"אתמול":"לפני "+d2+" ימים";
-      if(h>0) return "לפני "+h+" שעות";
-      if(m>0) return "לפני "+m+" דקות";
-      return "כרגע";
-    }catch(_){ return ""; }
-  }
+  function timeAgo(ts){ try{ var d=new Date(ts); var diff=Math.max(0,(Date.now()-d.getTime())/1000); var m=Math.floor(diff/60), h=Math.floor(m/60), d2=Math.floor(h/24); if(d2>0) return d2===1?"אתמול":"לפני "+d2+" ימים"; if(h>0) return "לפני "+h+" שעות"; if(m>0) return "לפני "+m+" דקות"; return "כרגע"; }catch(_){ return ""; } }
   function pSentence(buyer, product){ return (buyer||"לקוח/ה") + " רכש/ה " + (product||"מוצר"); }
 
   function normalize(data){
-    var arr=[];
-    if(Object.prototype.toString.call(data)==="[object Array]") arr=data;
-    else if(data&&typeof data==="object"){
-      if(Object.prototype.toString.call(data.items)==="[object Array]") arr=data.items;
-      else if(Object.prototype.toString.call(data.data)==="[object Array]") arr=data.data;
-      else if(Object.prototype.toString.call(data.results)==="[object Array]") arr=data.results;
-      else if(Object.prototype.toString.call(data.records)==="[object Array]") arr=data.records;
-    }
-    return arr.map(function(x){
-      return {
-        buyer: String(x.buyer||x.buyerName||x.customerName||x.name||x.customer||"לקוח/ה"),
-        product: String(x.product||x.productName||x.item||x.title||"מוצר"),
-        image: String(x.image||""),
-        purchased_at: x.purchased_at || new Date().toISOString()
-      };
-    });
+    var arr=[]; if(Object.prototype.toString.call(data)==="[object Array]") arr=data;
+    else if(data&&typeof data==="object"){ if(Object.prototype.toString.call(data.items)==="[object Array]") arr=data.items; else if(Object.prototype.toString.call(data.data)==="[object Array]") arr=data.data; else if(Object.prototype.toString.call(data.results)==="[object Array]") arr=data.results; else if(Object.prototype.toString.call(data.records)==="[object Array]") arr=data.records; }
+    return arr.map(function(x){ return { buyer:String(x.buyer||x.buyerName||x.customerName||x.name||x.customer||"לקוח/ה"), product:String(x.product||x.productName||x.item||x.title||"מוצר"), image:String(x.image||""), purchased_at:x.purchased_at||new Date().toISOString() }; });
   }
 
   function renderCard(p){
@@ -90,71 +61,35 @@
     sentence.textContent = pSentence(p.buyer, p.product);
     textCol.appendChild(sentence);
 
-    var imgEl;
+    var imgEl = fallbackBox();
     if (p.image) {
       var pre = new Image();
-      pre.decoding = "async"; pre.loading = "eager";
-      pre.onload = function(){
-        var tag=document.createElement("img");
-        tag.className="pimg"; tag.alt=""; tag.src=p.image;
-        imgEl && imgEl.parentNode && imgEl.parentNode.replaceChild(tag, imgEl);
-        imgEl = tag;
-      };
-      pre.onerror = function(){ replaceWithFallback(); };
-      pre.src = p.image;
-      imgEl = fallbackBox();
-    } else {
-      imgEl = fallbackBox();
+      pre.decoding="async"; pre.loading="eager";
+      pre.onload=function(){ var tag=document.createElement("img"); tag.className="pimg"; tag.alt=""; tag.src=p.image; tag.referrerPolicy="no-referrer"; imgEl.parentNode && imgEl.parentNode.replaceChild(tag,imgEl); imgEl=tag; };
+      pre.onerror=function(){ /* keep fallback */ };
+      pre.src=p.image;
     }
     function fallbackBox(){ var d=document.createElement("div"); d.className="pimg-fallback"; d.textContent="✓"; return d; }
-    function replaceWithFallback(){ var d=fallbackBox(); imgEl && imgEl.parentNode && imgEl.parentNode.replaceChild(d, imgEl); imgEl = d; }
 
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","סגירה"); x.textContent="×";
     x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ card.remove(); if(loop){ clearInterval(loop); loop=null; } }, 350); });
 
-    row.appendChild(textCol);
-    row.appendChild(imgEl);
-    row.appendChild(x);
+    row.appendChild(textCol); row.appendChild(imgEl); row.appendChild(x);
 
-    var footer=document.createElement("div"); footer.className="timebar";
-    footer.textContent = timeAgo(p.purchased_at);
+    var footer=document.createElement("div"); footer.className="timebar"; footer.textContent = timeAgo(p.purchased_at);
 
-    card.appendChild(row);
-    card.appendChild(footer);
+    card.appendChild(row); card.appendChild(footer);
     return card;
   }
 
-  // Rotation
   var items=[]; var i=0; var loop=null;
-  function show(){
-    if(!items.length) return;
-    var card=renderCard(items[i % items.length]); i++;
-    wrap.innerHTML=""; wrap.appendChild(card);
-    setTimeout(function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); }, Math.max(0, SHOW_MS-350));
-    setTimeout(function(){ if(card && card.parentNode){ card.parentNode.removeChild(card); } }, SHOW_MS);
-  }
+  function show(){ if(!items.length) return; var card=renderCard(items[i % items.length]); i++; wrap.innerHTML=""; wrap.appendChild(card); setTimeout(function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); }, Math.max(0, SHOW_MS-350)); setTimeout(function(){ if(card && card.parentNode){ card.parentNode.removeChild(card); } }, SHOW_MS); }
   function start(){ if(loop) clearInterval(loop); show(); loop=setInterval(show, SHOW_MS + GAP_MS); }
 
-  function fetchText(url){
-    return fetch(url,{method:"GET",credentials:"omit",cache:"no-store"})
-      .then(function(res){ return res.text().then(function(raw){ if(!res.ok) throw new Error(raw || ("HTTP "+res.status)); return raw; }); });
-  }
+  function fetchText(url){ return fetch(url,{method:"GET",credentials:"omit",cache:"no-store"}).then(function(res){ return res.text().then(function(raw){ if(!res.ok) throw new Error(raw || ("HTTP "+res.status)); return raw; }); }); }
   function fetchJSON(url){ return fetchText(url).then(function(raw){ try{ return JSON.parse(raw);}catch(_){ return {items:[]}; } }); }
 
   var t0 = Date.now();
-  var boot = function(){
-    fetchJSON(endpoint)
-      .then(function(data){
-        items = normalize(data).filter(function(x){ return x && (x.buyer || x.product); });
-        if(!items.length) throw new Error("No purchases");
-        var elapsed = Date.now()-t0, wait = Math.max(0, INIT_MS - elapsed);
-        setTimeout(start, wait);
-      })
-      .catch(function(err){
-        log("purchase load err:", err);
-        // Silent on purpose
-      });
-  };
-
+  function boot(){ fetchJSON(endpoint).then(function(data){ items = normalize(data).filter(function(x){ return x && (x.buyer || x.product); }); if(!items.length) throw new Error("No purchases"); var elapsed=Date.now()-t0, wait=Math.max(0, INIT_MS - elapsed); setTimeout(start, wait); }).catch(function(err){ log("purchase load err:", err); }); }
   if (INIT_MS > 0) setTimeout(boot, INIT_MS); else boot();
 })();
