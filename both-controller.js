@@ -55,8 +55,9 @@
     + '.psentence{font-weight:700;font-size:14px;line-height:1.2;text-align:center;}'
     + '.ptime{margin-inline-start:auto;color:#475569}'
     + '@media (min-width: 720px){ .row-purchase{grid-template-columns:1fr 80px 24px;} .pimg,.pimg-fallback{width:80px;height:80px;} .psentence{font-size:15px;} }'
-    // Mobile-smaller for reviews too
-    + '@media (max-width: 480px){ .card{width:300px;} .row{grid-template-columns:36px 1fr 22px;gap:8px;padding:10px 10px 6px;} .avatar,.avatar-fallback{width:36px;height:36px;} .name{font-size:13px;} .body{font-size:13px;} }'
+    // Mobile compact height — match reviews
++ '@media (max-width:480px){ .card{width:300px} .row{grid-template-columns:34px 1fr 22px;gap:8px;padding:10px 10px 6px} .avatar,.avatar-fallback{width:34px;height:34px} .name{font-size:13px} .subtitle{display:none} .body{font-size:13px;line-height:1.3;padding:0 10px 10px} .badgeText{font-size:11px} .gstars{font-size:12px} }'
+
   ;
   root.appendChild(style);
 
