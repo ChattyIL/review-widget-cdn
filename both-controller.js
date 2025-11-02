@@ -1,10 +1,5 @@
-// both-controller v3.3.0 — ES5-safe, alternates between reviews & purchases.
-// Uses the SAME UI as review widget.js (source of truth).
-// data-* on the <script> tag:
-//   data-reviews-endpoint="https://.../data/<slug>.json"
-//   data-purchases-endpoint="https://.../purchases/<slug>.json"
-//   data-show-ms="15000"  data-gap-ms="6000"  data-init-delay-ms="0"
-//   data-max-words="20"   data-debug="0"      data-badge="1"
+// both-controller v3.3.1 — ES5-safe, alternates reviews & purchases.
+// Matches review widget UI, but purchase cards prefer PRODUCT IMAGE if present.
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -13,7 +8,6 @@
   var scripts = document.scripts;
   var scriptEl = document.currentScript || scripts[scripts.length - 1];
 
-  // ---- config from embed ----
   var REVIEWS_EP   = scriptEl && scriptEl.getAttribute("data-reviews-endpoint");
   var PURCHASES_EP = scriptEl && scriptEl.getAttribute("data-purchases-endpoint");
 
@@ -22,10 +16,9 @@
   var INIT_MS   = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
   var MAX_WORDS = Number((scriptEl && scriptEl.getAttribute("data-max-words"))     || 20);
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
-  var /*BADGE*/ _BADGE = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1"); // ignored; always show to match widget.js
   var FADE_MS   = 350;
 
-  function log(){ if (DEBUG) { var a=["[both-controller v3.3.0]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if (DEBUG) { var a=["[both-controller v3.3.1]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!REVIEWS_EP && !PURCHASES_EP) {
     root.innerHTML =
@@ -33,7 +26,6 @@
     return;
   }
 
-  // ---- styles (copied from widget.js for pixel parity) ----
   var style = document.createElement("style");
   style.textContent = ''
     + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
@@ -43,6 +35,7 @@
     + '.row{display:grid;grid-template-columns:40px 1fr 24px;gap:10px;align-items:center;padding:12px 12px 8px;}'
     + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#eee;display:block;}'
     + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;}'
+    + '.prodimg{width:40px;height:40px;border-radius:10px;object-fit:cover;background:#eee;display:block;}'
     + '.meta{display:flex;flex-direction:column;gap:4px;}'
     + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
     + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;}'
@@ -59,7 +52,6 @@
     + '.xbtn{appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
     + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;}'
     + '.xbtn:active{transform:translateY(0);}'
-    + '.stars{display:none!important;}'
     + '.fade-in{animation:fadeIn .35s ease forwards;}'
     + '.fade-out{animation:fadeOut .35s ease forwards;}'
     + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
@@ -71,7 +63,7 @@
   wrap.className = "wrap";
   root.appendChild(wrap);
 
-  // ---- helpers (copied from widget.js) ----
+  // Helpers
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
   function renderMonogram(name){ var d=document.createElement("div"); d.className="avatar-fallback"; d.textContent=firstLetter(name); d.style.background=colorFromString(name); return d; }
@@ -88,39 +80,52 @@
     }
     return "";
   }
+  function getProductImage(o){
+    if(!o||typeof o!=="object") return "";
+    var keys = ["productImage","product_image","productImageUrl","product_image_url","productPhotoUrl","productPhoto","image","imageUrl","image_url","picture","photoUrl","photo"];
+    for (var i=0;i<keys.length;i++){ var k=keys[i]; if (o[k]!=null && String(o[k]).trim()) return String(o[k]).trim(); }
+    if (o.product && typeof o.product==="object") {
+      if (o.product.image) return String(o.product.image).trim();
+      if (o.product.imageUrl) return String(o.product.imageUrl).trim();
+    }
+    return "";
+  }
   function renderAvatar(name,url){
     if(url){
       var img=document.createElement("img");
-      img.className="avatar"; img.alt=""; img.width=40; img.height=40;
-      img.decoding="async"; img.loading="eager"; img.src=url;
+      img.className="avatar"; img.alt=""; img.width=40; img.height=40; img.decoding="async"; img.loading="eager"; img.src=url;
       img.addEventListener("error",function(){ img.replaceWith(renderMonogram(name)); });
       return img;
     }
     return renderMonogram(name);
+  }
+  function renderThumb(item){
+    if (item.kind==="purchase" && item.productImageUrl){
+      var im=document.createElement("img");
+      im.className="prodimg"; im.alt=""; im.width=40; im.height=40; im.decoding="async"; im.loading="eager"; im.src=item.productImageUrl;
+      im.addEventListener("error",function(){ im.replaceWith(renderAvatar(item.authorName, item.profilePhotoUrl)); });
+      return im;
+    }
+    return renderAvatar(item.authorName, item.profilePhotoUrl);
   }
   function truncateWords(s,n){ s=(s||"").replace(/\s+/g," ").trim(); var p=s?s.split(" "):[]; return p.length>n?p.slice(0,n).join(" ")+"…":s; }
   function scaleClass(text){ var t=(text||"").trim(), L=t.length; if(L>220) return "tiny"; if(L>140) return "small"; return ""; }
 
   function normReview(x){
     var raw = (x.text||x.reviewText||x.Content||x.content||"").trim();
-    return {
-      kind: "review",
-      authorName: x.authorName||x.userName||x.Header||x.name||x.author||"Anonymous",
-      text: raw,
-      rating: x.rating||x.stars||x.score||5,
-      profilePhotoUrl: x.Photo||x.reviewerPhotoUrl||getPhotoUrl(x)
-    };
+    return { kind:"review", authorName:x.authorName||x.userName||x.Header||x.name||x.author||"Anonymous", text:raw, rating:x.rating||x.stars||x.score||5, profilePhotoUrl:x.Photo||x.reviewerPhotoUrl||getPhotoUrl(x) };
   }
   function normPurchase(x){
     var buyer = x.buyerName||x.customerName||x.name||x.customer||x.buyer||"לקוח";
     var product = x.productName||x.item||x.title||x.product||"מוצר";
     var text = (x.text||x.note||("לקוח רכש: " + product));
     return {
-      kind: "purchase",
+      kind:"purchase",
       authorName: buyer,
       text: text,
       rating: 5,
-      profilePhotoUrl: x.Photo||x.avatar||getPhotoUrl(x)
+      profilePhotoUrl: x.Photo||x.avatar||getPhotoUrl(x),
+      productImageUrl: getProductImage(x)
     };
   }
   function normalizeArray(data, as){
@@ -143,15 +148,15 @@
     var card=document.createElement("div"); card.className="card fade-in";
     var header=document.createElement("div"); header.className="row";
 
-    var avatarEl=renderAvatar(item.authorName, item.profilePhotoUrl);
+    var left = renderThumb(item);
     var meta=document.createElement("div"); meta.className="meta";
-    var name=document.createElement("div"); name.className="name";
-    name.textContent=item.authorName||"Anonymous"; meta.appendChild(name);
+    var name=document.createElement("div"); name.className="name"; name.textContent=item.authorName||"Anonymous";
+    meta.appendChild(name);
 
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
     x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, FADE_MS); });
 
-    header.appendChild(avatarEl); header.appendChild(meta); header.appendChild(x);
+    header.appendChild(left); header.appendChild(meta); header.appendChild(x);
 
     var body=document.createElement("div");
     var shortText=truncateWords(item.text, MAX_WORDS);
@@ -177,7 +182,6 @@
     return card;
   }
 
-  // Interleave: R,P,R,P,... (skip missing)
   function interleave(reviews, purchases){
     var out=[], i=0, j=0;
     while(i<reviews.length || j<purchases.length){
@@ -187,10 +191,8 @@
     return out;
   }
 
-  // rotation
   var items=[], idx=0, loop=null;
-  function showNext(){
-    if(!items.length) return;
+  function showNext(){ if(!items.length) return;
     var card=renderCard(items[idx % items.length]); idx++;
     wrap.innerHTML=""; wrap.appendChild(card);
     setTimeout(function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); }, Math.max(0, SHOW_MS - FADE_MS));
@@ -198,22 +200,12 @@
   }
   function start(){
     if(loop) clearInterval(loop);
-    if(!items.length){
-      root.innerHTML =
-        '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">No items to display.</div>';
-      return;
-    }
-    if (INIT_MS > 0) {
-      setTimeout(function(){ showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS); }, INIT_MS);
-    } else {
-      showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS);
-    }
+    if(!items.length){ root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">No items to display.</div>'; return; }
+    if (INIT_MS > 0) { setTimeout(function(){ showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS); }, INIT_MS); }
+    else { showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS); }
   }
 
-  function fetchText(url){
-    return fetch(url, {method:"GET", credentials:"omit", cache:"no-store"})
-      .then(function(res){ return res.text().then(function(raw){ if(!res.ok) throw new Error(raw || ("HTTP "+res.status)); return raw; }); });
-  }
+  function fetchText(url){ return fetch(url,{method:"GET",credentials:"omit",cache:"no-store"}).then(function(res){ return res.text().then(function(raw){ if(!res.ok) throw new Error(raw || ("HTTP "+res.status)); return raw; }); }); }
   function fetchJSON(url){ return fetchText(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } }); }
 
   function loadAll(){
@@ -228,7 +220,7 @@
     }).catch(function(e){
       root.innerHTML =
         '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Widget error: '+ String(e && e.message || e) +'</div>';
-      console.error("[both-controller v3.3.0]", e);
+      console.error("[both-controller v3.3.1]", e);
     });
   }
 
