@@ -1,9 +1,4 @@
-// both-controller v3.3.1 — ES5-safe
-// Alternates between reviews & purchases with a unified UI.
-// Purchases: product image on the RIGHT, sentence centered vs. image, time in footer.
-// Reviews: same look as solo review widget (with avatar preload).
-// data-* on <script>: data-reviews-endpoint, data-purchases-endpoint,
-//   data-show-ms, data-gap-ms, data-init-delay-ms, data-max-words, data-debug, data-badge
+// both-controller v3.3.1 — ES5-safe, matches review widget; purchase uses product image on RIGHT, time in footer.
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -12,7 +7,7 @@
   var scripts = document.scripts;
   var scriptEl = document.currentScript || scripts[scripts.length - 1];
 
-  // ---- config from embed ----
+  // Config from embed
   var REVIEWS_EP   = scriptEl && scriptEl.getAttribute("data-reviews-endpoint");
   var PURCHASES_EP = scriptEl && scriptEl.getAttribute("data-purchases-endpoint");
   var SHOW_MS   = Number((scriptEl && scriptEl.getAttribute("data-show-ms"))       || 15000);
@@ -30,60 +25,37 @@
     return;
   }
 
-  // ---- styles (match solo widgets) ----
+  // Styles (share with reviews; purchase tweaks)
   var style = document.createElement("style");
   style.textContent = ''
     + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
     + ':host{all:initial;}'
     + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}'
-    + '.card{width:320px;max-width:88vw;background:#fff;color:#0b1220;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);border:1px solid rgba(0,0,0,.06);overflow:hidden;direction:auto;}'
-
-    // Review header (avatar, name, x)
-    + '.row{display:grid;grid-template-columns:40px 1fr 24px;gap:10px;align-items:center;padding:12px 12px 8px;}'
+    + '.card{width:320px;max-width:88vw;background:#fff;color:#0b1220;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);border:1px solid rgba(0,0,0,.06);overflow:hidden;}'
+    + '.row{display:grid;grid-template-columns:40px 1fr 24px;gap:10px;align-items:center;padding:12px 12px 8px;direction:auto;}'
     + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#eee;display:block;}'
     + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;}'
     + '.meta{display:flex;flex-direction:column;gap:4px;}'
     + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
     + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;}'
     + '.body.small{font-size:12.5px;} .body.tiny{font-size:11.5px;}'
-
-    // Footer (brand area)
-    + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(0,0,0,.07);font-size:12px;opacity:.95;}'
-    + '.gmark{display:flex;align-items:center;}'
-    + '.gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
+    + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(0,0,0,.07);font-size:12px;opacity:.95;direction:rtl;}'
+    + '.gmark{display:flex;align-items:center;} .gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
     + '.badgeText{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.9;}'
-    + '.badgeText .verified{color:#444;font-weight:600;}'
-    + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
-    + '.badgeText .tick{font-size:12px;line-height:1;}'
+    + '.badgeText .verified{color:#444;font-weight:600;} .badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;} .badgeText .tick{font-size:12px;line-height:1;}'
     + '.xbtn{appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
     + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;} .xbtn:active{transform:translateY(0);}'
     + '.fade-in{animation:fadeIn .35s ease forwards;} .fade-out{animation:fadeOut .35s ease forwards;}'
     + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
     + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
-
-    // Purchases: image RIGHT, sentence left/centered vertically; RTL for right anchoring
-    + '.row-purchase{direction:rtl;grid-template-columns:1fr 64px 24px;gap:12px;align-items:center;}'
-    + '.pimg{justify-self:end;width:64px;height:64px;border-radius:10px;object-fit:cover;background:#eee;display:block;}'
-    + '.pimg-fallback{justify-self:end;width:64px;height:64px;border-radius:10px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;}'
-    + '.psentence{font-weight:700;font-size:14px;line-height:1.2;text-align:right;}'
+    // Purchase mode overrides: RTL, image on RIGHT (bigger on desktop), buyer inline, time in footer
+    + '.row-p{direction:rtl;grid-template-columns:1fr 74px 24px;gap:12px;}'
+    + '.pimg{justify-self:end;width:74px;height:74px;border-radius:12px;object-fit:cover;background:#eef2f7;border:1px solid rgba(0,0,0,.06);}'
+    + '.pimg-fallback{justify-self:end;width:74px;height:74px;border-radius:12px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#475569;}'
+    + '.psentence{font-weight:700;font-size:15px;line-height:1.25;text-align:right;}'
     + '.ptime{margin-inline-start:auto;color:#475569}'
-
-    // Desktop bump for product image (same as solo)
-    + '@media (min-width:720px){ .row-purchase{grid-template-columns:1fr 80px 24px;} .pimg,.pimg-fallback{width:80px;height:80px;} .psentence{font-size:15px;} }'
-
-    // Mobile compact height — match solo widgets
-    + '@media (max-width:480px){'
-    + '  .card{width:300px;}'
-    + '  .row{grid-template-columns:34px 1fr 22px;gap:8px;padding:10px 10px 6px;}'
-    + '  .avatar,.avatar-fallback{width:34px;height:34px;}'
-    + '  .name{font-size:13px;}'
-    + '  .body{font-size:13px;line-height:1.3;padding:0 10px 10px;}'
-    + '  .badgeText{font-size:11px;}'
-    + '  .gstars{font-size:12px;}'
-    + '  .row-purchase{grid-template-columns:1fr 56px 22px;gap:10px;}'
-    + '  .pimg,.pimg-fallback{width:56px;height:56px;}'
-    + '  .psentence{font-size:13px;}'
-    + '}'
+    + '@media (min-width:720px){ .row-p{grid-template-columns:1fr 86px 24px;} .pimg,.pimg-fallback{width:86px;height:86px;} .psentence{font-size:16px;} }'
+    + '@media (max-width:480px){ .card{width:300px} .row{grid-template-columns:34px 1fr 22px;gap:8px;padding:10px 10px 6px} .avatar,.avatar-fallback{width:34px;height:34px} .name{font-size:13px} .body{font-size:13px;line-height:1.3;padding:0 10px 10px} .badgeText{font-size:11px} .gstars{font-size:12px} }'
   ;
   root.appendChild(style);
 
@@ -91,7 +63,7 @@
   wrap.className = "wrap";
   root.appendChild(wrap);
 
-  // ---- helpers ----
+  // Helpers
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
   function renderMonogram(name){
@@ -101,7 +73,7 @@
     d.style.background=colorFromString(name);
     return d;
   }
-  // Review avatar preload: show monogram first, swap to img when loaded (no blank)
+  // Preload avatar (prevents blank popping)
   function renderAvatarPreloaded(name, url){
     var shell = renderMonogram(name);
     if(url){
@@ -118,18 +90,8 @@
     }
     return shell;
   }
-
-  function truncateWords(s,n){
-    s=(s||"").replace(/\s+/g," ").trim();
-    var p=s?s.split(" "):[];
-    return p.length>n?p.slice(0,n).join(" ")+"…":s;
-  }
-  function scaleClass(text){
-    var t=(text||"").trim(), L=t.length;
-    if(L>220) return "tiny";
-    if(L>140) return "small";
-    return "";
-  }
+  function truncateWords(s,n){ s=(s||"").replace(/\s+/g," ").trim(); var p=s?s.split(" "):[]; return p.length>n?p.slice(0,n).join(" ")+"…":s; }
+  function scaleClass(text){ var t=(text||"").trim(), L=t.length; if(L>220) return "tiny"; if(L>140) return "small"; return ""; }
   function timeAgo(ts){
     try{
       var d=new Date(ts); var diff=Math.max(0,(Date.now()-d.getTime())/1000);
@@ -141,7 +103,7 @@
     }catch(_){ return ""; }
   }
 
-  // ---- normalizers ----
+  // Normalizers
   function getPhotoUrl(o){
     if(!o||typeof o!=="object") return "";
     var k=Object.keys(o);
@@ -167,8 +129,8 @@
   function normPurchase(x){
     return {
       kind: "purchase",
-      buyer:   x.buyerName||x.customerName||x.name||x.customer||x.buyer||"לקוח/ה",
-      product: x.productName||x.item||x.title||x.product||"מוצר",
+      buyer:   x.buyer||x.buyerName||x.customerName||x.name||x.customer||"לקוח/ה",
+      product: x.product||x.productName||x.item||x.title||"מוצר",
       image:   x.image||"",
       purchased_at: x.purchased_at || new Date().toISOString()
     };
@@ -188,10 +150,9 @@
     return arr;
   }
 
-  // Purchase sentence (gender-neutral): "<buyer> רכש/ה <product>"
   function pSentence(buyer, product){ return (buyer||"לקוח/ה") + " רכש/ה " + (product||"מוצר"); }
 
-  // ---- renderers ----
+  // Renderers
   function renderReviewCard(item){
     var card=document.createElement("div"); card.className="card fade-in";
     var header=document.createElement("div"); header.className="row";
@@ -228,22 +189,24 @@
 
   function renderPurchaseCard(p){
     var card=document.createElement("div"); card.className="card fade-in";
-    var header=document.createElement("div"); header.className="row row-purchase";
+    var header=document.createElement("div"); header.className="row row-p";
 
     var text=document.createElement("div"); text.className="psentence";
     text.textContent = pSentence(p.buyer, p.product);
 
     var imgEl;
     if (p.image) {
-      imgEl = new Image();
-      imgEl.className="pimg"; imgEl.alt=""; imgEl.decoding="async"; imgEl.loading="eager"; imgEl.src=p.image;
-      imgEl.onerror = function(){ imgEl.replaceWith(fallback()); };
+      var pre = new Image();
+      pre.decoding = "async"; pre.loading = "eager";
+      pre.onload = function(){ var tag=document.createElement("img"); tag.className="pimg"; tag.alt=""; tag.src=p.image; imgEl && imgEl.parentNode && imgEl.parentNode.replaceChild(tag, imgEl); imgEl = tag; };
+      pre.onerror = function(){ replaceWithFallback(); };
+      pre.src = p.image;
+      imgEl = fallbackBox();
     } else {
-      imgEl = fallback();
+      imgEl = fallbackBox();
     }
-    function fallback(){
-      var d=document.createElement("div"); d.className="pimg-fallback"; d.textContent=""; return d;
-    }
+    function fallbackBox(){ var d=document.createElement("div"); d.className="pimg-fallback"; d.textContent="✓"; return d; }
+    function replaceWithFallback(){ var d=fallbackBox(); imgEl && imgEl.parentNode && imgEl.parentNode.replaceChild(d, imgEl); imgEl = d; }
 
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
     x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
@@ -258,7 +221,7 @@
     return card;
   }
 
-  // ---- interleave R,P,R,P... ----
+  // Interleave
   function interleave(reviews, purchases){
     var out=[], i=0, j=0;
     while(i<reviews.length || j<purchases.length){
@@ -290,28 +253,21 @@
     }
   }
 
-  function fetchText(url){
-    return fetch(url, {method:"GET", credentials:"omit", cache:"no-store"})
-      .then(function(res){ return res.text().then(function(raw){ if(!res.ok) throw new Error(raw || ("HTTP "+res.status)); return raw; }); });
-  }
-  function fetchJSON(url){
-    return fetchText(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } });
-  }
+  function fetchText(url){ return fetch(url,{method:"GET",credentials:"omit",cache:"no-store"}).then(function(res){ return res.text().then(function(raw){ if(!res.ok) throw new Error(raw || ("HTTP "+res.status)); return raw; }); }); }
+  function fetchJSON(url){ return fetchText(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } }); }
 
   function loadAll(){
     var p1 = REVIEWS_EP ? fetchJSON(REVIEWS_EP).then(function(d){ return normalizeArray(d,"review"); }).catch(function(e){ log("reviews fetch err:", e); return []; }) : Promise.resolve([]);
     var p2 = PURCHASES_EP ? fetchJSON(PURCHASES_EP).then(function(d){ return normalizeArray(d,"purchase");}).catch(function(e){ log("purchases fetch err:", e); return []; }) : Promise.resolve([]);
     Promise.all([p1,p2]).then(function(r){
       var rev = r[0]||[], pur = r[1]||[];
-      log("counts:", rev.length, pur.length);
       items = interleave(rev, pur);
       start();
     }).catch(function(e){
-      root.innerHTML =
-        '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Widget error: '+ String(e && e.message || e) +'</div>';
+      root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Widget error: '+ String(e && e.message || e) +'</div>';
       console.error("[both-controller v3.3.1]", e);
     });
   }
 
-  if (INIT_MS > 0) { setTimeout(loadAll, 0); } else { loadAll(); }
+  loadAll();
 })();
