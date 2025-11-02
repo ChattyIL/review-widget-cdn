@@ -1,4 +1,6 @@
-// both-controller v3.5.3 — ES5-safe, pro UI (RTL purchases, image RIGHT, verified pill over text, clock in footer)
+// both-controller v3.5.x — ES5-safe, unified UI.
+// Purchases: image RIGHT, sentence LEFT, verify pill above sentence, X at top-left.
+// Reviews: unchanged (Google mark + stars + optional EVID badge).
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -16,11 +18,10 @@
   var MAX_WORDS = Number((scriptEl && scriptEl.getAttribute("data-max-words"))     || 20);
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
-  function log(){ if (DEBUG) { var a=["[both-controller v3.5.3]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if(DEBUG){ var a=["[both-controller v3.5.x]"]; for(var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!REVIEWS_EP && !PURCHASES_EP) {
-    root.innerHTML =
-      '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Missing endpoints.</div>';
+    root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Missing endpoints.</div>';
     return;
   }
 
@@ -31,19 +32,21 @@
     + ':host{all:initial;}'
     + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}'
 
-    /* Card */
-    + '.card{width:340px;max-width:90vw;background:#fff;color:#0b1220;border-radius:18px;'
-    + 'box-shadow:0 16px 40px rgba(2,6,23,.18);border:1px solid rgba(2,6,23,.06);overflow:hidden;}'
+    /* Card shell (shared) */
+    + '.card{width:340px;max-width:90vw;background:#fff;color:#0b1220;border-radius:18px;box-shadow:0 16px 40px rgba(2,6,23,.18);border:1px solid rgba(2,6,23,.06);overflow:hidden;}'
 
-    /* Reviews header/body/footer */
-    + '.row{display:grid;grid-template-columns:40px 1fr 24px;gap:12px;align-items:center;'
-    + 'padding:12px 12px 8px;direction:auto;}'
+    /* Header rows (reviews default) */
+    + '.row{display:grid;grid-template-columns:40px 1fr 24px;gap:12px;align-items:center;padding:12px 12px 8px;direction:auto;}'
     + '.meta{display:flex;flex-direction:column;gap:4px;}'
     + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
     + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;}'
     + '.body.small{font-size:12.5px;} .body.tiny{font-size:11.5px;}'
+
+    /* Avatars (reviews) */
     + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#eef2f7;display:block;border:1px solid rgba(2,6,23,.06);}'
     + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;}'
+
+    /* Footer brand (reviews) */
     + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(2,6,23,.07);font-size:12px;opacity:.95;direction:rtl;}'
     + '.gmark{display:flex;align-items:center;}'
     + '.gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
@@ -52,36 +55,28 @@
     + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
     + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-    /* Close button (top-left of header) */
+    /* Close button */
     + '.xbtn{appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
-    + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;} .xbtn:active{transform:translateY(0);}'
+    + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;}'
+    + '.xbtn:active{transform:translateY(0);}'
 
-    /* Purchases: RTL, grid places: [X | TEXT | IMAGE] */
-    + '.row-p{direction:rtl;display:grid;grid-template-columns:24px 1fr 92px;grid-auto-rows:auto;'
-    + 'gap:12px;align-items:start;padding:12px 12px 10px;}'
-    + '.pimg{grid-column:3;grid-row:1 / span 2;justify-self:end;width:92px;height:92px;border-radius:14px;object-fit:cover;background:#eef2f7;display:block;border:1px solid rgba(2,6,23,.06);}'
-    + '.pimg-fallback{grid-column:3;grid-row:1 / span 2;justify-self:end;width:92px;height:92px;border-radius:14px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#475569;}'
-    + '.psentence{grid-column:2;grid-row:2;font-weight:600;font-size:15px;line-height:1.3;text-align:right;}'
+    /* Purchases layout — X | text | image (image RIGHT), RTL text alignment */
+    + '.row-p{grid-template-columns:24px 1fr 96px;gap:12px;align-items:center;padding:12px 12px 8px;direction:rtl;}'
+    + '.pcol{display:flex;flex-direction:column;align-items:flex-start;gap:6px;direction:rtl;}'
+    + '.vpill{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border-radius:9999px;background:#E9F9EE;border:1px solid rgba(16,185,129,.25);box-shadow:0 0 0 1px rgba(16,185,129,.06) inset;color:#0F9D58;font-weight:700;font-size:12px;white-space:nowrap;margin-inline-end:6px;}'
+    + '.vcheck{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:9999px;background:#22C55E;color:#fff;font-size:12px;line-height:1;}'
+    + '.psentence{font-weight:600;font-size:15px;line-height:1.3;text-align:right;font-family:"Assistant",ui-sans-serif,system-ui;}'
     + '.psentence .buyer{font-weight:700;}'
-    + '.psentence .product{font-weight:700;color:#1e88ff;}'
-
-    /* Verified pill above text, single line */
-    + '.verify-pill{grid-column:2;grid-row:1;display:inline-flex;align-items:center;gap:8px;'
-    + 'font-size:12.5px;font-weight:700;background:#e8f7e8;color:#138a2e;border:1px solid rgba(19,138,46,.20);'
-    + 'padding:6px 10px;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.5);margin-bottom:6px;}'
-    + '.verify-pill .chk{display:inline-flex;width:16px;height:16px;border-radius:999px;background:#17c65a;color:#fff;align-items:center;justify-content:center;font-size:12px;line-height:1;}'
-
-    /* Time footer with clock icon */
+    + '.psentence .product{font-weight:700;color:#1677ff;}'
+    + '.pimg{justify-self:end;width:96px;height:96px;border-radius:14px;object-fit:cover;background:#eef2f7;display:block;border:1px solid rgba(2,6,23,.06);}'
+    + '.pimg-fallback{justify-self:end;width:96px;height:96px;border-radius:14px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#475569;}'
     + '.timebar{display:flex;align-items:center;gap:6px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(2,6,23,.07);font-size:12.5px;color:#475569;direction:rtl;}'
-    + '.clock{display:inline-block;width:14px;height:14px;}' 
+    + '.clock{font-size:13px;opacity:.9;}'
 
     /* Animations */
     + '.fade-in{animation:fadeIn .35s ease forwards;} .fade-out{animation:fadeOut .35s ease forwards;}'
     + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
     + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
-
-    /* Desktop tweak */
-    + '@media (min-width: 720px){ .row-p{grid-template-columns:24px 1fr 104px;} .pimg,.pimg-fallback{width:104px;height:104px;} }'
 
     /* Mobile compact */
     + '@media (max-width:480px){'
@@ -90,10 +85,10 @@
     + '  .avatar,.avatar-fallback{width:34px;height:34px}'
     + '  .name{font-size:13px}'
     + '  .body{font-size:13px;line-height:1.3;padding:0 10px 10px}'
-    + '  .row-p{grid-template-columns:24px 1fr 84px;gap:10px;padding:10px 10px 8px}'
+    + '  .row-p{grid-template-columns:24px 1fr 84px;gap:10px;padding:10px 10px 6px}'
     + '  .pimg,.pimg-fallback{width:84px;height:84px}'
     + '  .psentence{font-size:14px}'
-    + '  .verify-pill{font-size:12px;padding:5px 9px}'
+    + '  .vpill{font-size:11.5px;padding:3px 9px}'
     + '  .timebar{font-size:11.5px}'
     + '}'
   ;
@@ -106,8 +101,6 @@
   // ---- helpers ----
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
-  function firstName(s){ s=(s||"").trim(); var p=s.split(/\s+/); return p[0]||s||"לקוח/ה"; }
-
   function renderMonogram(name){
     var d=document.createElement("div");
     d.className="avatar-fallback";
@@ -142,6 +135,12 @@
       if(m>0) return "לפני "+m+" דקות";
       return "כרגע";
     }catch(_){ return ""; }
+  }
+  function firstName(s){
+    s = String(s||"").trim();
+    if(!s) return "";
+    var parts = s.split(/\s+/);
+    return parts[0] || s;
   }
 
   // ---- normalizers ----
@@ -191,11 +190,10 @@
     return arr;
   }
 
-  // ---- purchases sentence (first-name only; product highlighted) ----
-  function sentenceHTML(buyer, product){
+  function purchaseHTML(buyer, product){
     var b = firstName(buyer||"");
     var p = String(product||"מוצר");
-    return '<span class="buyer">'+ b +'</span> ' + 'רכש/ה' + ' ' + '<span class="product">'+ p +'</span>';
+    return '<span class="buyer">'+(b||"לקוח/ה")+'</span> רכש/ה <span class="product">'+p+'</span>';
   }
 
   // ---- renderers ----
@@ -235,24 +233,28 @@
 
   function renderPurchaseCard(p){
     var card=document.createElement("div"); card.className="card fade-in";
-    var header=document.createElement("div"); header.className="row-p";
 
-    // X (top-left)
+    // X | text(col) | image
+    var header=document.createElement("div"); header.className="row row-p";
+
+    // X button (left)
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
     x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
-    header.appendChild(x); // grid-col 1
 
-    // Verified pill (above sentence)
-    var pill=document.createElement("div"); pill.className="verify-pill";
-    pill.innerHTML = '<span class="txt"><span class="v">מאומת</span> <span class="brand">EVID</span></span><span class="chk" aria-hidden="true">✓</span>';
-    header.appendChild(pill); // grid-col 2
+    // Text column (right-to-left content)
+    var textCol=document.createElement("div"); textCol.className="pcol";
 
-    // Sentence (first-name only, product highlighted)
-    var text=document.createElement("div"); text.className="psentence";
-    text.innerHTML = sentenceHTML(p.buyer, p.product);
-    header.appendChild(text); // grid-col 2
+    // Verify pill (one line, small)
+    var pill=document.createElement("div"); pill.className="vpill";
+    pill.innerHTML = '<span class="vcheck">✓</span><span>מאומת <b>EVID</b></span>';
+    textCol.appendChild(pill);
 
-    // Product image on RIGHT with preload
+    // Main sentence
+    var sentence=document.createElement("div"); sentence.className="psentence";
+    sentence.innerHTML = purchaseHTML(p.buyer, p.product);
+    textCol.appendChild(sentence);
+
+    // Product image (right)
     var imgEl;
     function fallbackBox(){ var d=document.createElement("div"); d.className="pimg-fallback"; d.textContent="✓"; return d; }
     function replaceWith(el){ if(imgEl && imgEl.parentNode){ imgEl.parentNode.replaceChild(el, imgEl); } imgEl = el; }
@@ -266,20 +268,24 @@
     } else {
       imgEl = fallbackBox();
     }
-    header.appendChild(imgEl); // grid-col 3 (spans 2 rows via CSS)
+
+    // Order: X | text | image  (so image is RIGHT)
+    header.appendChild(x);
+    header.appendChild(textCol);
+    header.appendChild(imgEl);
+
+    // Footer with clock + time
+    var footer=document.createElement("div"); footer.className="timebar";
+    var ico=document.createElement("span"); ico.className="clock"; ico.textContent="🕒";
+    var t=document.createElement("span"); t.textContent=timeAgo(p.purchased_at);
+    footer.appendChild(t); footer.appendChild(ico);
 
     card.appendChild(header);
-
-    // Footer time with clock
-    var footer=document.createElement("div"); footer.className="timebar";
-    footer.innerHTML = ''
-      + '<svg class="clock" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 7v6l4 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>'
-      + timeAgo(p.purchased_at);
     card.appendChild(footer);
     return card;
   }
 
-  // ---- interleave & rotation ----
+  // ---- interleave ----
   function interleave(reviews, purchases){
     var out=[], i=0, j=0;
     while(i<reviews.length || j<purchases.length){
@@ -289,6 +295,7 @@
     return out;
   }
 
+  // ---- rotation ----
   var items=[], idx=0, loop=null;
   function showNext(){
     if(!items.length) return;
@@ -311,6 +318,7 @@
   // ---- fetch ----
   function fetchText(url){ return fetch(url,{method:"GET",credentials:"omit",cache:"no-store"}).then(function(res){ return res.text().then(function(raw){ if(!res.ok) throw new Error(raw || ("HTTP "+res.status)); return raw; }); }); }
   function fetchJSON(url){ return fetchText(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } }); }
+
   function loadAll(){
     var p1 = REVIEWS_EP ? fetchJSON(REVIEWS_EP).then(function(d){ return normalizeArray(d,"review"); }).catch(function(e){ log("reviews fetch err:", e); return []; }) : Promise.resolve([]);
     var p2 = PURCHASES_EP ? fetchJSON(PURCHASES_EP).then(function(d){ return normalizeArray(d,"purchase");}).catch(function(e){ log("purchases fetch err:", e); return []; }) : Promise.resolve([]);
@@ -320,8 +328,9 @@
       start();
     }).catch(function(e){
       root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Widget error: '+ String(e && e.message || e) +'</div>';
-      console.error("[both-controller v3.5.3]", e);
+      console.error("[both-controller v3.5.x]", e);
     });
   }
+
   loadAll();
 })();
