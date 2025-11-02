@@ -54,15 +54,9 @@
     + '.fade-out{animation:fadeOut .35s ease forwards;}'
     + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
     + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
-
-    // Mobile compact height
-    + '@media (max-width:480px){'
-    + '  .row{grid-template-columns:34px 1fr 22px;gap:8px;padding:10px 10px 6px;}'
-    + '  .avatar-slot,.avatar,.avatar-fallback{width:34px;height:34px;font-size:13px;}'
-    + '  .name{font-size:13px;}'
-    + '  .body{font-size:13px;line-height:1.3;padding:0 10px 10px;}'
-    + '  .badgeText{font-size:11px;}'
-    + '  .gstars{font-size:12px;}'
+  
+    // Mobile compact height — match reviews
++ '@media (max-width:480px){ .card{width:300px} .row{grid-template-columns:34px 1fr 22px;gap:8px;padding:10px 10px 6px} .avatar,.avatar-fallback{width:34px;height:34px} .name{font-size:13px} .subtitle{display:none} .body{font-size:13px;line-height:1.3;padding:0 10px 10px} .badgeText{font-size:11px} .gstars{font-size:12px} }'
     + '}'
     
   ;
