@@ -90,7 +90,7 @@
   function sentence(buyer, product){
     // Example: "נועה רכשה תמונת קנבס"
     // Keep buyer as-is; verb is gender-neutral enough for demo UI
-    return (buyer||"לקוח/ה") + " " + "רכשה" + " " + (product||"מוצר");
+    return (buyer||"לקוח/ה") + " " + "רכש/ה" + " " + (product||"מוצר");
   }
 
   function renderCard(p){
