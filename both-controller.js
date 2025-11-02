@@ -1,4 +1,5 @@
-// both-controller v3.3.0 — parity with review widget, lazy avatars, mobile-compact, desktop bigger product pic
+// both-controller v3.3.0 — ES5-safe, consistent UI, purchase uses product image, time in footer.
+// data-* on the <script>: data-reviews-endpoint, data-purchases-endpoint, data-show-ms, data-gap-ms, data-init-delay-ms, data-max-words, data-debug, data-badge
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -9,22 +10,22 @@
 
   var REVIEWS_EP   = scriptEl && scriptEl.getAttribute("data-reviews-endpoint");
   var PURCHASES_EP = scriptEl && scriptEl.getAttribute("data-purchases-endpoint");
-
-  var SHOW_MS      = Number((scriptEl && scriptEl.getAttribute("data-show-ms"))       || 15000);
-  var GAP_MS       = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))        || 6000);
-  var INIT_MS      = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
-  var MAX_WORDS    = Number((scriptEl && scriptEl.getAttribute("data-max-words"))     || 20);
-  var DEBUG        = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
-  var BADGE        = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
+  var SHOW_MS   = Number((scriptEl && scriptEl.getAttribute("data-show-ms"))       || 15000);
+  var GAP_MS    = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))        || 6000);
+  var INIT_MS   = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
+  var MAX_WORDS = Number((scriptEl && scriptEl.getAttribute("data-max-words"))     || 20);
+  var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
+  var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
 
   function log(){ if (DEBUG) { var a=["[both-controller v3.3.0]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!REVIEWS_EP && !PURCHASES_EP) {
     root.innerHTML =
-      '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Missing <code>data-reviews-endpoint</code> and <code>data-purchases-endpoint</code>.</div>';
+      '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Missing endpoints.</div>';
     return;
   }
 
+  // ---- styles (match review widget; purchases use larger image on desktop) ----
   var style = document.createElement("style");
   style.textContent = ''
     + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
@@ -32,44 +33,30 @@
     + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}'
     + '.card{width:320px;max-width:88vw;background:#fff;color:#0b1220;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);border:1px solid rgba(0,0,0,.06);overflow:hidden;direction:auto;}'
     + '.row{display:grid;grid-template-columns:40px 1fr 24px;gap:10px;align-items:center;padding:12px 12px 8px;}'
-    + '.avatar-slot{width:40px;height:40px;border-radius:50%;overflow:hidden;display:block;background:#eee;}'
-    + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;display:block;}'
-    + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;font-size:14px;}'
+    + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#eee;display:block;}'
+    + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;}'
     + '.meta{display:flex;flex-direction:column;gap:4px;}'
     + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
-    + '.subtitle{display:none;}'
     + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;}'
-    + '.body.small{font-size:12.5px;}'
-    + '.body.tiny{font-size:11.5px;}'
+    + '.body.small{font-size:12.5px;} .body.tiny{font-size:11.5px;}'
     + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(0,0,0,.07);font-size:12px;opacity:.95;}'
-    + '.gmark{display:flex;align-items:center;} .gmark svg{display:block;}'
-    + '.gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
+    + '.gmark{display:flex;align-items:center;} .gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
     + '.badgeText{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.9;}'
-    + '.badgeText .verified{color:#444;font-weight:600;}'
-    + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
-    + '.badgeText .tick{font-size:12px;line-height:1;}'
+    + '.badgeText .verified{color:#444;font-weight:600;} .badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;} .badgeText .tick{font-size:12px;line-height:1;}'
     + '.xbtn{appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
-    + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;}'
-    + '.xbtn:active{transform:translateY(0);}'
-    + '.fade-in{animation:fadeIn .35s ease forwards;}'
-    + '.fade-out{animation:fadeOut .35s ease forwards;}'
+    + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;} .xbtn:active{transform:translateY(0);}'
+    + '.fade-in{animation:fadeIn .35s ease forwards;} .fade-out{animation:fadeOut .35s ease forwards;}'
     + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
     + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
-
-    // Desktop: bigger “purchase” picture when that layout is used
-    + '.pic-slot{width:56px;height:56px;border-radius:10px;overflow:hidden;background:#e2e8f0;display:none;}'
-    + '.prod{display:none;}'
-    + '@media (min-width:900px){ .prod{display:block;} .pic-slot{display:block;width:72px;height:72px;border-radius:12px;} }'
-
-    // Mobile compact height
-    + '@media (max-width:480px){'
-    + '  .row{grid-template-columns:34px 1fr 22px;gap:8px;padding:10px 10px 6px;}'
-    + '  .avatar-slot,.avatar,.avatar-fallback{width:34px;height:34px;font-size:13px;}'
-    + '  .name{font-size:13px;}'
-    + '  .body{font-size:13px;line-height:1.3;padding:0 10px 10px;}'
-    + '  .badgeText{font-size:11px;}'
-    + '  .gstars{font-size:12px;}'
-    + '}'
+    // Purchases mode tweaks (image on right, bigger on desktop)
+    + '.row-purchase{direction:rtl;grid-template-columns:1fr 64px 24px;gap:12px;}'
+    + '.pimg{justify-self:end;width:64px;height:64px;border-radius:10px;object-fit:cover;background:#eee;display:block;}'
+    + '.pimg-fallback{justify-self:end;width:64px;height:64px;border-radius:10px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#475569;}'
+    + '.psentence{font-weight:700;font-size:14px;line-height:1.2;text-align:center;}'
+    + '.ptime{margin-inline-start:auto;color:#475569}'
+    + '@media (min-width: 720px){ .row-purchase{grid-template-columns:1fr 80px 24px;} .pimg,.pimg-fallback{width:80px;height:80px;} .psentence{font-size:15px;} }'
+    // Mobile-smaller for reviews too
+    + '@media (max-width: 480px){ .card{width:300px;} .row{grid-template-columns:36px 1fr 22px;gap:8px;padding:10px 10px 6px;} .avatar,.avatar-fallback{width:36px;height:36px;} .name{font-size:13px;} .body{font-size:13px;} }'
   ;
   root.appendChild(style);
 
@@ -77,23 +64,57 @@
   wrap.className = "wrap";
   root.appendChild(wrap);
 
-  // helpers
+  // ---- helpers ----
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
-  function renderAvatarLazy(name,url){
-    var slot = document.createElement("div"); slot.className="avatar-slot";
-    var mono = document.createElement("div"); mono.className="avatar-fallback";
-    mono.textContent=firstLetter(name); mono.style.background=colorFromString(name);
-    slot.appendChild(mono);
-    if (url){
-      var im=new Image(); im.decoding="async"; im.loading="eager"; im.className="avatar"; im.alt="";
-      im.onload=function(){ slot.replaceChild(im, mono); }; im.onerror=function(){};
-      im.src=url;
-    }
-    return slot;
+  function renderMonogram(name){
+    var d=document.createElement("div");
+    d.className="avatar-fallback";
+    d.textContent=firstLetter(name);
+    d.style.background=colorFromString(name);
+    return d;
   }
-  function truncateWords(s,n){ s=(s||"").replace(/\s+/g," ").trim(); var p=s?s.split(" "):[]; return p.length>n?p.slice(0,n).join(" ")+"…":s; }
-  function scaleClass(text){ var t=(text||"").trim(), L=t.length; if(L>220) return "tiny"; if(L>140) return "small"; return ""; }
+  // Avatar preload: show monogram until image is ready
+  function renderAvatarPreloaded(name, url){
+    var shell = renderMonogram(name);
+    if(url){
+      var img = new Image();
+      img.width=40; img.height=40; img.decoding="async"; img.loading="eager";
+      img.onload = function(){
+        var tag=document.createElement("img");
+        tag.className="avatar"; tag.alt="";
+        tag.width=40; tag.height=40; tag.decoding="async"; tag.loading="eager"; tag.src=url;
+        shell.replaceWith(tag);
+      };
+      img.onerror = function(){ /* keep monogram */ };
+      img.src = url;
+    }
+    return shell;
+  }
+
+  function truncateWords(s,n){
+    s=(s||"").replace(/\s+/g," ").trim();
+    var p=s?s.split(" "):[];
+    return p.length>n?p.slice(0,n).join(" ")+"…":s;
+  }
+  function scaleClass(text){
+    var t=(text||"").trim(), L=t.length;
+    if(L>220) return "tiny";
+    if(L>140) return "small";
+    return "";
+  }
+  function timeAgo(ts){
+    try{
+      var d=new Date(ts); var diff=Math.max(0,(Date.now()-d.getTime())/1000);
+      var m=Math.floor(diff/60), h=Math.floor(m/60), d2=Math.floor(h/24);
+      if(d2>0) return d2===1?"אתמול":"לפני "+d2+" ימים";
+      if(h>0) return "לפני "+h+" שעות";
+      if(m>0) return "לפני "+m+" דקות";
+      return "כרגע";
+    }catch(_){ return ""; }
+  }
+
+  // Normalizers
   function getPhotoUrl(o){
     if(!o||typeof o!=="object") return "";
     var k=Object.keys(o);
@@ -107,7 +128,6 @@
     }
     return "";
   }
-
   function normReview(x){
     return {
       kind: "review",
@@ -118,32 +138,16 @@
     };
   }
   function normPurchase(x){
-    var buyer = x.buyerName||x.customerName||x.buyer||x.name||x.customer||"לקוח/ה";
-    var product = x.productName||x.item||x.title||x.product||"מוצר";
-    var when = x.purchased_at||x.time||x.ts||new Date().toISOString();
     return {
       kind: "purchase",
-      authorName: buyer,
-      text: buyer + " רכש/ה " + product,
-      rating: 5,
-      profilePhotoUrl: x.Photo||x.avatar||getPhotoUrl(x),
-      productImage: x.productImage||x.image||"",
-      purchased_at: when
+      buyer:   x.buyerName||x.customerName||x.name||x.customer||x.buyer||"לקוח/ה",
+      product: x.productName||x.item||x.title||x.product||"מוצר",
+      image:   x.image||"",
+      purchased_at: x.purchased_at || new Date().toISOString()
     };
   }
-  function timeAgo(ts){
-    try{ var d=new Date(ts); var diff=Math.max(0,(Date.now()-d.getTime())/1000);
-      var m=Math.floor(diff/60), h=Math.floor(m/60), d2=Math.floor(h/24);
-      if (d2>0) return d2===1?"אתמול":"לפני "+d2+" ימים";
-      if (h>0)  return "לפני "+h+" שעות";
-      if (m>0)  return "לפני "+m+" דקות";
-      return "כרגע";
-    }catch(_){ return ""; }
-  }
-
   function normalizeArray(data, as){
-    var arr=[];
-    if(Object.prototype.toString.call(data)==="[object Array]") arr=data;
+    var arr=[]; if(Object.prototype.toString.call(data)==="[object Array]") arr=data;
     else if(data&&typeof data==="object"){
       if(Object.prototype.toString.call(data.items)==="[object Array]") arr=data.items;
       else if(Object.prototype.toString.call(data.data)==="[object Array]") arr=data.data;
@@ -157,84 +161,90 @@
     return arr;
   }
 
-  function renderPurchaseFooter(when){
-    var brand=document.createElement("div"); brand.className="brand";
-    brand.textContent = timeAgo(when);
-    return brand;
-  }
+  function pSentence(buyer, product){ return (buyer||"לקוח/ה") + " " + "רכשה" + " " + (product||"מוצר"); }
 
-  function renderCard(item){
+  // Renderers
+  function renderReviewCard(item){
     var card=document.createElement("div"); card.className="card fade-in";
-
     var header=document.createElement("div"); header.className="row";
-
-    // For purchases (desktop), optionally show product image square at the left
-    var prodSlot=null;
-    if (item.kind==="purchase"){
-      prodSlot=document.createElement("div"); prodSlot.className="pic-slot prod";
-      if (item.productImage){
-        var im=new Image(); im.decoding="async"; im.loading="eager"; im.alt=""; im.style.width="100%"; im.style.height="100%"; im.style.objectFit="cover";
-        im.onload=function(){ prodSlot.innerHTML=""; prodSlot.appendChild(im); };
-        im.onerror=function(){ prodSlot.style.background="#e2e8f0"; };
-        im.src=item.productImage;
-      }
-    }
-
-    var avatarEl=renderAvatarLazy(item.authorName, item.profilePhotoUrl);
+    var avatarEl = renderAvatarPreloaded(item.authorName, item.profilePhotoUrl);
 
     var meta=document.createElement("div"); meta.className="meta";
     var name=document.createElement("div"); name.className="name";
-    name.textContent=item.kind==="purchase" ? (item.authorName + " רכש/ה " + (item.product||"")) : (item.authorName||"Anonymous");
-    meta.appendChild(name);
+    name.textContent=item.authorName||"Anonymous"; meta.appendChild(name);
 
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
     x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
 
-    if (item.kind==="purchase" && prodSlot){ header.appendChild(prodSlot); }
     header.appendChild(avatarEl); header.appendChild(meta); header.appendChild(x);
 
     var body=document.createElement("div");
-    var textForReview = truncateWords(item.text, MAX_WORDS);
-    body.className="body "+(item.kind==="purchase" ? "" : scaleClass(textForReview));
-    body.textContent = (item.kind==="purchase" ? "" : textForReview); // purchases show text in title; footer shows time
+    var shortText=truncateWords(item.text, MAX_WORDS);
+    body.className="body "+scaleClass(shortText); body.textContent=shortText;
 
-    var brand;
-    if (item.kind==="purchase"){
-      brand = renderPurchaseFooter(item.purchased_at);
-    } else {
-      brand = document.createElement("div"); brand.className="brand";
-      var footer = ''
-        + '<span class="gmark" aria-label="Google">'
-        + '  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">'
-        + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path>'
-        + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
-        + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
-        + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
-        + '  </svg>'
-        + '</span>'
-        + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>';
-      if (BADGE) { footer += '<span class="badgeText" aria-label="Verified by Evid"><span class="verified">מאומת</span><span class="evid">EVID<span class="tick" aria-hidden="true">✓</span></span></span>'; }
-      brand.innerHTML = footer;
-    }
-
+    var brand=document.createElement("div"); brand.className="brand";
+    brand.innerHTML = ''
+      + '<span class="gmark" aria-label="Google">'
+      + '  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">'
+      + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path>'
+      + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
+      + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
+      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
+      + '  </svg>'
+      + '</span>'
+      + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>'
+      + (BADGE ? '<span class="badgeText" aria-label="Verified by Evid"><span class="verified">מאומת</span><span class="evid">EVID<span class="tick" aria-hidden="true">✓</span></span></span>' : '');
     card.appendChild(header); card.appendChild(body); card.appendChild(brand);
     return card;
   }
 
+  function renderPurchaseCard(p){
+    var card=document.createElement("div"); card.className="card fade-in";
+    var header=document.createElement("div"); header.className="row row-purchase";
+
+    var text=document.createElement("div"); text.className="psentence";
+    text.textContent = pSentence(p.buyer, p.product);
+
+    var imgEl;
+    if (p.image) {
+      imgEl = new Image();
+      imgEl.className="pimg"; imgEl.alt=""; imgEl.decoding="async"; imgEl.loading="eager"; imgEl.src=p.image;
+      imgEl.onerror = function(){ imgEl.replaceWith(fallback()); };
+    } else {
+      imgEl = fallback();
+    }
+    function fallback(){
+      var d=document.createElement("div"); d.className="pimg-fallback"; d.textContent="✓"; return d;
+    }
+
+    var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
+    x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
+
+    header.appendChild(text); header.appendChild(imgEl); header.appendChild(x);
+
+    var brand=document.createElement("div"); brand.className="brand";
+    var time=document.createElement("span"); time.className="ptime"; time.textContent=timeAgo(p.purchased_at);
+    brand.appendChild(time);
+
+    card.appendChild(header); card.appendChild(brand);
+    return card;
+  }
+
+  // Interleave R,P,R,P...
   function interleave(reviews, purchases){
     var out=[], i=0, j=0;
     while(i<reviews.length || j<purchases.length){
-      if(i<reviews.length){ out.push(reviews[i++]); }
-      if(j<purchases.length){ out.push(purchases[j++]); }
+      if(i<reviews.length){ out.push({kind:"review", data:reviews[i++]}); }
+      if(j<purchases.length){ out.push({kind:"purchase", data:purchases[j++]}); }
     }
     return out;
   }
 
   var items=[], idx=0, loop=null;
-
   function showNext(){
     if(!items.length) return;
-    var card=renderCard(items[idx % items.length]); idx++;
+    var itm = items[idx % items.length]; idx++;
+    var card = (itm.kind==="purchase") ? renderPurchaseCard(itm.data) : renderReviewCard(itm.data);
     wrap.innerHTML=""; wrap.appendChild(card);
     setTimeout(function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); }, Math.max(0, SHOW_MS - 350));
     setTimeout(function(){ if(card && card.parentNode){ card.parentNode.removeChild(card); } }, SHOW_MS);
@@ -242,22 +252,30 @@
   function start(){
     if(loop) clearInterval(loop);
     if(!items.length){
-      root.innerHTML =
-        '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">No items to display.</div>';
+      root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">No items to display.</div>';
       return;
     }
-    if (INIT_MS > 0) { setTimeout(function(){ showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS); }, INIT_MS); }
-    else { showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS); }
+    if (INIT_MS > 0) {
+      setTimeout(function(){ showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS); }, INIT_MS);
+    } else {
+      showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS);
+    }
   }
 
-  function fetchText(url){ return fetch(url, {method:"GET", credentials:"omit", cache:"no-store"}).then(function(res){ return res.text().then(function(raw){ if(!res.ok) throw new Error(raw || ("HTTP "+res.status)); return raw; }); }); }
-  function fetchJSON(url){ return fetchText(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } }); }
+  function fetchText(url){
+    return fetch(url, {method:"GET", credentials:"omit", cache:"no-store"})
+      .then(function(res){ return res.text().then(function(raw){ if(!res.ok) throw new Error(raw || ("HTTP "+res.status)); return raw; }); });
+  }
+  function fetchJSON(url){
+    return fetchText(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } });
+  }
 
   function loadAll(){
-    var p1 = REVIEWS_EP   ? fetchJSON(REVIEWS_EP).then(function(d){ return normalizeArray(d,"review"); })    .catch(function(e){ log("reviews fetch err:", e); return []; }) : Promise.resolve([]);
-    var p2 = PURCHASES_EP ? fetchJSON(PURCHASES_EP).then(function(d){ return normalizeArray(d,"purchase"); }).catch(function(e){ log("purchases fetch err:", e); return []; }) : Promise.resolve([]);
+    var p1 = REVIEWS_EP ? fetchJSON(REVIEWS_EP).then(function(d){ return normalizeArray(d,"review"); }).catch(function(e){ log("reviews fetch err:", e); return []; }) : Promise.resolve([]);
+    var p2 = PURCHASES_EP ? fetchJSON(PURCHASES_EP).then(function(d){ return normalizeArray(d,"purchase");}).catch(function(e){ log("purchases fetch err:", e); return []; }) : Promise.resolve([]);
     Promise.all([p1,p2]).then(function(r){
       var rev = r[0]||[], pur = r[1]||[];
+      log("counts:", rev.length, pur.length);
       items = interleave(rev, pur);
       start();
     }).catch(function(e){
