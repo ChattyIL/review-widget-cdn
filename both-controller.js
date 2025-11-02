@@ -1,5 +1,5 @@
-// both-controller v3.5.0 — ES5-safe, unified pro UI.
-// Purchases: RTL, product image on RIGHT, chip+star above image, first-name bold, product name light-blue bold, time in footer.
+// both-controller v3.5.1 — ES5-safe, unified pro UI.
+// Purchases: RTL, product image on RIGHT; headline to its LEFT; star + "מאומת EVID" chip above image; time in footer.
 // Reviews: unchanged (Google mark + stars + optional EVID badge).
 (function () {
   var hostEl = document.getElementById("reviews-widget");
@@ -19,7 +19,7 @@
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
 
-  function log(){ if (DEBUG) { var a=["[both-controller v3.5.0]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if (DEBUG) { var a=["[both-controller v3.4.1]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!REVIEWS_EP && !PURCHASES_EP) {
     root.innerHTML =
@@ -34,12 +34,9 @@
     + ':host{all:initial;}'
     + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}'
 
-    /* Card */
-    + '.card{width:340px;max-width:90vw;background:#fff;color:#0b1220;border-radius:18px;box-shadow:0 16px 40px rgba(2,6,23,.18);border:1px solid rgba(2,6,23,.06);overflow:hidden;position:relative;}'
-
-    /* X button fixed top-left */
-    + '.xbtn{appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.95;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;position:absolute;top:10px;left:10px;}'
-    + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);} .xbtn:active{transform:translateY(0);}'
+    /* Card shell (shared) */
+    + '.card{width:340px;max-width:90vw;background:#fff;color:#0b1220;border-radius:18px;'
+    + 'box-shadow:0 16px 40px rgba(2,6,23,.18);border:1px solid rgba(2,6,23,.06);overflow:hidden;}'
 
     /* Header rows */
     + '.row{display:grid;grid-template-columns:40px 1fr 24px;gap:12px;align-items:center;padding:12px 12px 8px;direction:auto;}'
@@ -61,36 +58,46 @@
     + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
     + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-    /* Purchases — RTL, image on RIGHT, sentence left of image */
-    + '.row-p{direction:rtl;grid-template-columns:1fr 96px 0;gap:14px;align-items:center;padding:18px 16px 10px;}'
-    + '.pimgBox{position:relative;justify-self:end;}'
-    + '.pimg,.pimg-fallback{width:96px;height:96px;border-radius:14px;object-fit:cover;background:#eef2f7;display:block;border:1px solid rgba(2,6,23,.06);}'
-    + '.pimg-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#475569;}'
-    + '.chipRow{position:absolute;top:-12px;right:0;display:flex;gap:8px;align-items:center;}'
-    + '.verifyChip{background:#eaf9ee;color:#128a3b;border:1px solid rgba(18,138,59,.15);padding:4px 10px;border-radius:999px;font-weight:700;font-size:12px;display:inline-flex;align-items:center;gap:6px;}'
-    + '.verifyChip .dot{display:inline-flex;width:16px;height:16px;border-radius:50%;background:#17c964;align-items:center;justify-content:center;color:#fff;font-size:11px;line-height:1;}'
-    + '.goldStar{font-size:16px;line-height:1;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.25);}'
-    + '.psentence{font-size:15px;line-height:1.3;text-align:right;}'
-    + '.pFirst{font-weight:700;}'
-    + '.pProduct{font-weight:700;color:#2e90ff;}'
-    + '.timebar{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 16px;border-top:1px solid rgba(2,6,23,.07);font-size:12.5px;color:#475569;direction:rtl;}'
+    /* Close button */
+    + '.xbtn{appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
+    + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;}'
+    + '.xbtn:active{transform:translateY(0);}'
+
+    /* Purchases — RTL, IMAGE ON RIGHT, text to its left */
+    + '.row-p{direction:rtl;grid-template-columns:82px 1fr 24px;gap:12px;align-items:center;}'
+    + '.psentence{font-weight:700;font-size:15px;line-height:1.25;text-align:right;}'
+    + '.psentence .buyer{font-weight:800;}'
+    + '.psentence .product{font-weight:800;color:#2b7cff;}'
+    + '.pbox{position:relative;justify-self:end;width:82px;height:82px;}'
+    + '.pimg{width:100%;height:100%;border-radius:14px;object-fit:cover;background:#eef2f7;display:block;border:1px solid rgba(2,6,23,.06);}'
+    + '.pimg-fallback{width:100%;height:100%;border-radius:14px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#475569;border:1px solid rgba(2,6,23,.06);}'
+
+    /* Star + small verify chip above image, with small margin */
+    + '.pstar{position:absolute;top:-12px;right:0;font-size:18px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
+    + '.verify-chip{position:absolute;top:-10px;right:22px;display:inline-flex;align-items:center;gap:6px;'
+    + 'padding:2px 8px;border-radius:9999px;background:#eaf9ee;color:#16a34a;border:1px solid rgba(22,163,74,.22);'
+    + 'font-weight:700;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.05);}'
+    + '.verify-chip .dot{display:inline-block;width:16px;height:16px;border-radius:10px;background:#16a34a;color:#fff;line-height:16px;text-align:center;font-size:11px;}'
 
     /* Animations */
     + '.fade-in{animation:fadeIn .35s ease forwards;} .fade-out{animation:fadeOut .35s ease forwards;}'
     + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
     + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
 
-    /* Mobile compact */
+    /* Desktop boost */
+    + '@media (min-width:720px){ .row-p{grid-template-columns:96px 1fr 24px;} .pbox{width:96px;height:96px;} .psentence{font-size:15.5px;} }'
+
+    /* Mobile compact height (both) */
     + '@media (max-width:480px){'
     + '  .card{width:300px}'
-    + '  .row{grid-template-columns:34px 1fr 0;gap:8px;padding:10px 10px 6px}'
+    + '  .row{grid-template-columns:34px 1fr 22px;gap:8px;padding:10px 10px 6px}'
     + '  .avatar,.avatar-fallback{width:34px;height:34px}'
     + '  .name{font-size:13px}'
     + '  .body{font-size:13px;line-height:1.3;padding:0 10px 10px}'
-    + '  .row-p{grid-template-columns:1fr 84px 0;gap:10px;padding:14px 12px 8px}'
-    + '  .pimg,.pimg-fallback{width:84px;height:84px}'
-    + '  .psentence{font-size:14px}'
-    + '  .verifyChip{font-size:11px;padding:3px 8px}'
+    + '  .badgeText{font-size:11px} .gstars{font-size:12px}'
+    + '  .row-p{grid-template-columns:72px 1fr 22px;gap:10px;padding:10px 10px 6px}'
+    + '  .pbox{width:72px;height:72px}'
+    + '  .verify-chip{top:-9px;right:18px;font-size:11.5px;padding:2px 7px}'
     + '}'
   ;
   root.appendChild(style);
@@ -102,12 +109,7 @@
   // ---- helpers ----
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
-  function firstName(s){
-    s = String(s||"").trim();
-    var parts = s.split(/\s+/);
-    return parts[0] || s || "לקוח/ה";
-  }
-  function escapeText(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])}); }
+  function firstName(s){ s=(s||"").trim(); var sp=s.split(/\s+/); return sp[0]||s||"לקוח/ה"; }
 
   function renderMonogram(name){
     var d=document.createElement("div");
@@ -116,7 +118,7 @@
     d.style.background=colorFromString(name);
     return d;
   }
-  // Preload avatar
+  // Preload avatar (prevents blank popping)
   function renderAvatarPreloaded(name, url){
     var shell = renderMonogram(name);
     if(url){
@@ -128,12 +130,11 @@
         tag.width=40; tag.height=40; tag.decoding="async"; tag.loading="eager"; tag.src=url;
         shell.replaceWith(tag);
       };
-      img.onerror = function(){};
+      img.onerror = function(){ /* keep monogram */ };
       img.src = url;
     }
     return shell;
   }
-
   function truncateWords(s,n){ s=(s||"").replace(/\s+/g," ").trim(); var p=s?s.split(" "):[]; return p.length>n?p.slice(0,n).join(" ")+"…":s; }
   function scaleClass(text){ var t=(text||"").trim(), L=t.length; if(L>220) return "tiny"; if(L>140) return "small"; return ""; }
   function timeAgo(ts){
@@ -194,12 +195,27 @@
     return arr;
   }
 
+  // "Yoav רכש/ה נעלי..." — bold first name + bold light-blue product
+  function buildSentenceNode(buyer, product){
+    var line=document.createElement("div");
+    line.className="psentence";
+    var frag=document.createDocumentFragment();
+
+    var b=document.createElement("strong"); b.className="buyer"; b.textContent=firstName(buyer);
+    var mid=document.createTextNode(" רכש/ה ");
+    var p=document.createElement("strong"); p.className="product"; p.textContent=(product||"מוצר");
+
+    frag.appendChild(b); frag.appendChild(mid); frag.appendChild(p);
+    line.appendChild(frag);
+    return line;
+  }
+
   // ---- renderers ----
   function renderReviewCard(item){
     var card=document.createElement("div"); card.className="card fade-in";
     var header=document.createElement("div"); header.className="row";
-
     var avatarEl = renderAvatarPreloaded(item.authorName, item.profilePhotoUrl);
+
     var meta=document.createElement("div"); meta.className="meta";
     var name=document.createElement("div"); name.className="name";
     name.textContent=item.authorName||"Anonymous"; meta.appendChild(name);
@@ -207,8 +223,8 @@
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
     x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
 
-    header.appendChild(avatarEl); header.appendChild(meta); header.appendChild(document.createElement("div")); // spacer (grid 3rd col)
-    card.appendChild(x); // absolute TL
+    header.appendChild(avatarEl); header.appendChild(meta); header.appendChild(x);
+
     var body=document.createElement("div");
     var shortText=truncateWords(item.text, MAX_WORDS);
     body.className="body "+scaleClass(shortText); body.textContent=shortText;
@@ -233,18 +249,11 @@
     var card=document.createElement("div"); card.className="card fade-in";
     var header=document.createElement("div"); header.className="row row-p";
 
-    // TEXT (only first name bold, product name light-blue bold)
-    var text=document.createElement("div"); text.className="psentence";
-    var first=document.createElement("span"); first.className="pFirst"; first.textContent=firstName(p.buyer);
-    var verb=document.createTextNode(' רכש/ה ');
-    var product=document.createElement("span"); product.className="pProduct"; product.textContent=String(p.product||"מוצר");
-    text.appendChild(first); text.appendChild(verb); text.appendChild(product);
-
-    // IMAGE box + overlays
-    var box=document.createElement("div"); box.className="pimgBox";
+    // IMAGE box (right)
+    var pbox=document.createElement("div"); pbox.className="pbox";
     var imgEl;
     function fallback(){ var d=document.createElement("div"); d.className="pimg-fallback"; d.textContent="✓"; return d; }
-    function swap(el){ if(imgEl && imgEl.parentNode){ imgEl.parentNode.replaceChild(el, imgEl);} imgEl=el; }
+    function swap(el){ if(imgEl && imgEl.parentNode){ imgEl.parentNode.replaceChild(el, imgEl); } imgEl=el; }
 
     if (p.image) {
       var pre=new Image(); pre.decoding="async"; pre.loading="eager";
@@ -253,21 +262,27 @@
       pre.src=p.image;
       imgEl=fallback();
     } else { imgEl=fallback(); }
-    box.appendChild(imgEl);
+    pbox.appendChild(imgEl);
 
-    // Chip + star row (chip to the LEFT of the star, RTL layout places them nicely at top-right)
-    var chipRow=document.createElement("div"); chipRow.className="chipRow";
-    var chip=document.createElement("span"); chip.className="verifyChip"; chip.innerHTML='מאומת <strong>EVID</strong> <span class="dot">✓</span>';
-    var star=document.createElement("span"); star.className="goldStar"; star.textContent='★';
-    chipRow.appendChild(chip); chipRow.appendChild(star);
-    box.appendChild(chipRow);
+    // Star + small verify chip above image (with small margin)
+    var star=document.createElement("div"); star.className="pstar"; star.textContent="★";
+    var chip=document.createElement("div"); chip.className="verify-chip";
+    var dot=document.createElement("span"); dot.className="dot"; dot.textContent="✓";
+    var label=document.createElement("span"); label.textContent="EVID מאומת";
+    chip.appendChild(dot); chip.appendChild(label);
+    pbox.appendChild(star); pbox.appendChild(chip);
 
-    // X at top-left (absolute)
-    var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","סגירה"); x.textContent="×";
+    // Sentence (left of image)
+    var sentence = buildSentenceNode(p.buyer, p.product);
+
+    // Close (leftmost)
+    var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
     x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
 
-    header.appendChild(text); header.appendChild(box); header.appendChild(document.createElement("div")); // spacer
-    card.appendChild(x);
+    // Order matters in RTL grid: image (right col), then sentence (middle), then X (left)
+    header.appendChild(pbox);
+    header.appendChild(sentence);
+    header.appendChild(x);
 
     var footer=document.createElement("div"); footer.className="timebar";
     footer.textContent = timeAgo(p.purchased_at);
@@ -322,8 +337,9 @@
       start();
     }).catch(function(e){
       root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Widget error: '+ String(e && e.message || e) +'</div>';
-      console.error("[both-controller v3.5.0]", e);
+      console.error("[both-controller v3.4.1]", e);
     });
   }
+
   loadAll();
 })();
