@@ -161,7 +161,7 @@
     return arr;
   }
 
-  function pSentence(buyer, product){ return (buyer||"לקוח/ה") + " " + "רכשה" + " " + (product||"מוצר"); }
+  function pSentence(buyer, product){ return (buyer||"לקוח/ה") + " " + "רכש/ה" + " " + (product||"מוצר"); }
 
   // Renderers
   function renderReviewCard(item){
