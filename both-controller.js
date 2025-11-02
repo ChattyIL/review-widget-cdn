@@ -1,5 +1,9 @@
-// both-controller v3.3.0 — ES5-safe, consistent UI, purchase uses product image, time in footer.
-// data-* on the <script>: data-reviews-endpoint, data-purchases-endpoint, data-show-ms, data-gap-ms, data-init-delay-ms, data-max-words, data-debug, data-badge
+// both-controller v3.3.1 — ES5-safe
+// Alternates between reviews & purchases with a unified UI.
+// Purchases: product image on the RIGHT, sentence centered vs. image, time in footer.
+// Reviews: same look as solo review widget (with avatar preload).
+// data-* on <script>: data-reviews-endpoint, data-purchases-endpoint,
+//   data-show-ms, data-gap-ms, data-init-delay-ms, data-max-words, data-debug, data-badge
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -8,6 +12,7 @@
   var scripts = document.scripts;
   var scriptEl = document.currentScript || scripts[scripts.length - 1];
 
+  // ---- config from embed ----
   var REVIEWS_EP   = scriptEl && scriptEl.getAttribute("data-reviews-endpoint");
   var PURCHASES_EP = scriptEl && scriptEl.getAttribute("data-purchases-endpoint");
   var SHOW_MS   = Number((scriptEl && scriptEl.getAttribute("data-show-ms"))       || 15000);
@@ -17,7 +22,7 @@
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
 
-  function log(){ if (DEBUG) { var a=["[both-controller v3.3.0]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if (DEBUG) { var a=["[both-controller v3.3.1]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!REVIEWS_EP && !PURCHASES_EP) {
     root.innerHTML =
@@ -25,13 +30,15 @@
     return;
   }
 
-  // ---- styles (match review widget; purchases use larger image on desktop) ----
+  // ---- styles (match solo widgets) ----
   var style = document.createElement("style");
   style.textContent = ''
     + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
     + ':host{all:initial;}'
     + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}'
     + '.card{width:320px;max-width:88vw;background:#fff;color:#0b1220;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);border:1px solid rgba(0,0,0,.06);overflow:hidden;direction:auto;}'
+
+    // Review header (avatar, name, x)
     + '.row{display:grid;grid-template-columns:40px 1fr 24px;gap:10px;align-items:center;padding:12px 12px 8px;}'
     + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#eee;display:block;}'
     + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;}'
@@ -39,25 +46,44 @@
     + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
     + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;}'
     + '.body.small{font-size:12.5px;} .body.tiny{font-size:11.5px;}'
+
+    // Footer (brand area)
     + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(0,0,0,.07);font-size:12px;opacity:.95;}'
-    + '.gmark{display:flex;align-items:center;} .gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
+    + '.gmark{display:flex;align-items:center;}'
+    + '.gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
     + '.badgeText{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.9;}'
-    + '.badgeText .verified{color:#444;font-weight:600;} .badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;} .badgeText .tick{font-size:12px;line-height:1;}'
+    + '.badgeText .verified{color:#444;font-weight:600;}'
+    + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
+    + '.badgeText .tick{font-size:12px;line-height:1;}'
     + '.xbtn{appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
     + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;} .xbtn:active{transform:translateY(0);}'
     + '.fade-in{animation:fadeIn .35s ease forwards;} .fade-out{animation:fadeOut .35s ease forwards;}'
     + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
     + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
-    // Purchases mode tweaks (image on right, bigger on desktop)
-    + '.row-purchase{direction:rtl;grid-template-columns:1fr 64px 24px;gap:12px;}'
-    + '.pimg{justify-self:end;width:64px;height:64px;border-radius:10px;object-fit:cover;background:#eee;display:block;}'
-    + '.pimg-fallback{justify-self:end;width:64px;height:64px;border-radius:10px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#475569;}'
-    + '.psentence{font-weight:700;font-size:14px;line-height:1.2;text-align:center;}'
-    + '.ptime{margin-inline-start:auto;color:#475569}'
-    + '@media (min-width: 720px){ .row-purchase{grid-template-columns:1fr 80px 24px;} .pimg,.pimg-fallback{width:80px;height:80px;} .psentence{font-size:15px;} }'
-    // Mobile compact height — match reviews
-+ '@media (max-width:480px){ .card{width:300px} .row{grid-template-columns:34px 1fr 22px;gap:8px;padding:10px 10px 6px} .avatar,.avatar-fallback{width:34px;height:34px} .name{font-size:13px} .subtitle{display:none} .body{font-size:13px;line-height:1.3;padding:0 10px 10px} .badgeText{font-size:11px} .gstars{font-size:12px} }'
 
+    // Purchases: image RIGHT, sentence left/centered vertically; RTL for right anchoring
+    + '.row-purchase{direction:rtl;grid-template-columns:1fr 64px 24px;gap:12px;align-items:center;}'
+    + '.pimg{justify-self:end;width:64px;height:64px;border-radius:10px;object-fit:cover;background:#eee;display:block;}'
+    + '.pimg-fallback{justify-self:end;width:64px;height:64px;border-radius:10px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;}'
+    + '.psentence{font-weight:700;font-size:14px;line-height:1.2;text-align:right;}'
+    + '.ptime{margin-inline-start:auto;color:#475569}'
+
+    // Desktop bump for product image (same as solo)
+    + '@media (min-width:720px){ .row-purchase{grid-template-columns:1fr 80px 24px;} .pimg,.pimg-fallback{width:80px;height:80px;} .psentence{font-size:15px;} }'
+
+    // Mobile compact height — match solo widgets
+    + '@media (max-width:480px){'
+    + '  .card{width:300px;}'
+    + '  .row{grid-template-columns:34px 1fr 22px;gap:8px;padding:10px 10px 6px;}'
+    + '  .avatar,.avatar-fallback{width:34px;height:34px;}'
+    + '  .name{font-size:13px;}'
+    + '  .body{font-size:13px;line-height:1.3;padding:0 10px 10px;}'
+    + '  .badgeText{font-size:11px;}'
+    + '  .gstars{font-size:12px;}'
+    + '  .row-purchase{grid-template-columns:1fr 56px 22px;gap:10px;}'
+    + '  .pimg,.pimg-fallback{width:56px;height:56px;}'
+    + '  .psentence{font-size:13px;}'
+    + '}'
   ;
   root.appendChild(style);
 
@@ -75,7 +101,7 @@
     d.style.background=colorFromString(name);
     return d;
   }
-  // Avatar preload: show monogram until image is ready
+  // Review avatar preload: show monogram first, swap to img when loaded (no blank)
   function renderAvatarPreloaded(name, url){
     var shell = renderMonogram(name);
     if(url){
@@ -115,7 +141,7 @@
     }catch(_){ return ""; }
   }
 
-  // Normalizers
+  // ---- normalizers ----
   function getPhotoUrl(o){
     if(!o||typeof o!=="object") return "";
     var k=Object.keys(o);
@@ -162,9 +188,10 @@
     return arr;
   }
 
-  function pSentence(buyer, product){ return (buyer||"לקוח/ה") + " " + "רכש/ה" + " " + (product||"מוצר"); }
+  // Purchase sentence (gender-neutral): "<buyer> רכש/ה <product>"
+  function pSentence(buyer, product){ return (buyer||"לקוח/ה") + " רכש/ה " + (product||"מוצר"); }
 
-  // Renderers
+  // ---- renderers ----
   function renderReviewCard(item){
     var card=document.createElement("div"); card.className="card fade-in";
     var header=document.createElement("div"); header.className="row";
@@ -215,7 +242,7 @@
       imgEl = fallback();
     }
     function fallback(){
-      var d=document.createElement("div"); d.className="pimg-fallback"; d.textContent="✓"; return d;
+      var d=document.createElement("div"); d.className="pimg-fallback"; d.textContent=""; return d;
     }
 
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
@@ -231,7 +258,7 @@
     return card;
   }
 
-  // Interleave R,P,R,P...
+  // ---- interleave R,P,R,P... ----
   function interleave(reviews, purchases){
     var out=[], i=0, j=0;
     while(i<reviews.length || j<purchases.length){
@@ -282,9 +309,9 @@
     }).catch(function(e){
       root.innerHTML =
         '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Widget error: '+ String(e && e.message || e) +'</div>';
-      console.error("[both-controller v3.3.0]", e);
+      console.error("[both-controller v3.3.1]", e);
     });
   }
 
-  loadAll();
+  if (INIT_MS > 0) { setTimeout(loadAll, 0); } else { loadAll(); }
 })();
