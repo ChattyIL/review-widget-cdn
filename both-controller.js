@@ -1,7 +1,8 @@
-// both-controller v3.2.0 — ES5-safe, alternates between reviews & purchases feeds.
+// both-controller v3.3.0 — ES5-safe, alternates between reviews & purchases.
+// Uses the SAME UI as review widget.js (source of truth).
 // data-* on the <script> tag:
 //   data-reviews-endpoint="https://.../data/<slug>.json"
-//   data-purchases-endpoint="https://.../data/<slug>.json"
+//   data-purchases-endpoint="https://.../purchases/<slug>.json"
 //   data-show-ms="15000"  data-gap-ms="6000"  data-init-delay-ms="0"
 //   data-max-words="20"   data-debug="0"      data-badge="1"
 (function () {
@@ -16,22 +17,23 @@
   var REVIEWS_EP   = scriptEl && scriptEl.getAttribute("data-reviews-endpoint");
   var PURCHASES_EP = scriptEl && scriptEl.getAttribute("data-purchases-endpoint");
 
-  var SHOW_MS      = Number((scriptEl && scriptEl.getAttribute("data-show-ms"))       || 15000);
-  var GAP_MS       = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))        || 6000);
-  var INIT_MS      = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
-  var MAX_WORDS    = Number((scriptEl && scriptEl.getAttribute("data-max-words"))     || 20);
-  var DEBUG        = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
-  var BADGE        = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
+  var SHOW_MS   = Number((scriptEl && scriptEl.getAttribute("data-show-ms"))       || 15000);
+  var GAP_MS    = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))        || 6000);
+  var INIT_MS   = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
+  var MAX_WORDS = Number((scriptEl && scriptEl.getAttribute("data-max-words"))     || 20);
+  var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
+  var /*BADGE*/ _BADGE = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1"); // ignored; always show to match widget.js
+  var FADE_MS   = 350;
 
-  function log(){ if (DEBUG) { var a=["[both-controller v3.2.0]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if (DEBUG) { var a=["[both-controller v3.3.0]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!REVIEWS_EP && !PURCHASES_EP) {
     root.innerHTML =
-      '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Missing <code>data-reviews-endpoint</code> and <code>data-purchases-endpoint</code>.</div>';
+      '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Missing <code>data-reviews-endpoint</code> and/or <code>data-purchases-endpoint</code>.</div>';
     return;
   }
 
-  // ---- styles ----
+  // ---- styles (copied from widget.js for pixel parity) ----
   var style = document.createElement("style");
   style.textContent = ''
     + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
@@ -43,12 +45,12 @@
     + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;}'
     + '.meta{display:flex;flex-direction:column;gap:4px;}'
     + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
-    + '.subtitle{font-size:12px;opacity:.8;}'
     + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;}'
     + '.body.small{font-size:12.5px;}'
     + '.body.tiny{font-size:11.5px;}'
     + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(0,0,0,.07);font-size:12px;opacity:.95;}'
-    + '.gmark{display:flex;align-items:center;}'
+    + '.gmark{display:flex;align-items:center;height:16px;}'
+    + '.gmark svg{display:block;}'
     + '.gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
     + '.badgeText{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.9;}'
     + '.badgeText .verified{color:#444;font-weight:600;}'
@@ -57,6 +59,7 @@
     + '.xbtn{appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
     + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;}'
     + '.xbtn:active{transform:translateY(0);}'
+    + '.stars{display:none!important;}'
     + '.fade-in{animation:fadeIn .35s ease forwards;}'
     + '.fade-out{animation:fadeOut .35s ease forwards;}'
     + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
@@ -68,16 +71,10 @@
   wrap.className = "wrap";
   root.appendChild(wrap);
 
-  // ---- helpers ----
+  // ---- helpers (copied from widget.js) ----
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
-  function renderMonogram(name){
-    var d=document.createElement("div");
-    d.className="avatar-fallback";
-    d.textContent=firstLetter(name);
-    d.style.background=colorFromString(name);
-    return d;
-  }
+  function renderMonogram(name){ var d=document.createElement("div"); d.className="avatar-fallback"; d.textContent=firstLetter(name); d.style.background=colorFromString(name); return d; }
   function getPhotoUrl(o){
     if(!o||typeof o!=="object") return "";
     var k=Object.keys(o);
@@ -101,43 +98,31 @@
     }
     return renderMonogram(name);
   }
-  function truncateWords(s,n){
-    s=(s||"").replace(/\s+/g," ").trim();
-    var p=s?s.split(" "):[];
-    return p.length>n?p.slice(0,n).join(" ")+"…":s;
-  }
-  function scaleClass(text){
-    var t=(text||"").trim(), L=t.length;
-    if(L>220) return "tiny";
-    if(L>140) return "small";
-    return "";
-  }
+  function truncateWords(s,n){ s=(s||"").replace(/\s+/g," ").trim(); var p=s?s.split(" "):[]; return p.length>n?p.slice(0,n).join(" ")+"…":s; }
+  function scaleClass(text){ var t=(text||"").trim(), L=t.length; if(L>220) return "tiny"; if(L>140) return "small"; return ""; }
 
-  // Normalize any “review” object
   function normReview(x){
+    var raw = (x.text||x.reviewText||x.Content||x.content||"").trim();
     return {
       kind: "review",
       authorName: x.authorName||x.userName||x.Header||x.name||x.author||"Anonymous",
-      text:       x.text||x.reviewText||x.Content||x.content||"",
-      rating:     x.rating||x.stars||x.score||5,
+      text: raw,
+      rating: x.rating||x.stars||x.score||5,
       profilePhotoUrl: x.Photo||x.reviewerPhotoUrl||getPhotoUrl(x)
     };
   }
-  // Normalize any “purchase” object
   function normPurchase(x){
-    var buyer = x.buyerName||x.customerName||x.name||x.customer||"לקוח";
+    var buyer = x.buyerName||x.customerName||x.name||x.customer||x.buyer||"לקוח";
     var product = x.productName||x.item||x.title||x.product||"מוצר";
     var text = (x.text||x.note||("לקוח רכש: " + product));
     return {
       kind: "purchase",
       authorName: buyer,
       text: text,
-      rating: 5, // purchases don’t have rating; keep UI consistent
-      profilePhotoUrl: x.Photo||x.avatar||getPhotoUrl(x),
-      product: product
+      rating: 5,
+      profilePhotoUrl: x.Photo||x.avatar||getPhotoUrl(x)
     };
   }
-
   function normalizeArray(data, as){
     var arr=[];
     if(Object.prototype.toString.call(data)==="[object Array]") arr=data;
@@ -147,29 +132,24 @@
       else if(Object.prototype.toString.call(data.results)==="[object Array]") arr=data.results;
       else if(Object.prototype.toString.call(data.records)==="[object Array]") arr=data.records;
       else if(Object.prototype.toString.call(data.reviews)==="[object Array]") arr=data.reviews;
-      else if(data.text||data.Content||data.reviewText||data.content) arr=[data];
+      else if(data.text||data.Content||data.reviewText||data.content||data.note||data.productName) arr=[data];
     }
-    if(as==="review")  return arr.map(normReview);
-    if(as==="purchase")return arr.map(normPurchase);
-    return arr;
+    var out = (as==="review") ? arr.map(normReview) : arr.map(normPurchase);
+    if (as==="review") { out = out.filter(function(x){ return (x.text||"").trim(); }); }
+    return out;
   }
 
   function renderCard(item){
     var card=document.createElement("div"); card.className="card fade-in";
-
     var header=document.createElement("div"); header.className="row";
-    var avatarEl=renderAvatar(item.authorName, item.profilePhotoUrl);
 
+    var avatarEl=renderAvatar(item.authorName, item.profilePhotoUrl);
     var meta=document.createElement("div"); meta.className="meta";
     var name=document.createElement("div"); name.className="name";
     name.textContent=item.authorName||"Anonymous"; meta.appendChild(name);
 
-    var subt=document.createElement("div"); subt.className="subtitle";
-    subt.textContent = (item.kind==="purchase" ? "רכישה אחרונה" : "ביקורת לקוח");
-    meta.appendChild(subt);
-
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
-    x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
+    x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, FADE_MS); });
 
     header.appendChild(avatarEl); header.appendChild(meta); header.appendChild(x);
 
@@ -178,23 +158,20 @@
     body.className="body "+scaleClass(shortText); body.textContent=shortText;
 
     var brand=document.createElement("div"); brand.className="brand";
-    var footer = ''
-      + '<span class="gmark" aria-label="Google">'
-      + '  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">'
-      + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path>'
-      + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
-      + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
-      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
-      + '  </svg>'
-      + '</span>'
-      + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>';
-    if (BADGE) {
-      footer += '<span class="badgeText" aria-label="Verified by Evid">'
-             +  '<span class="verified">מאומת</span>'
-             +  '<span class="evid">EVID<span class="tick" aria-hidden="true">✓</span></span>'
-             +  '</span>';
-    }
-    brand.innerHTML = footer;
+    brand.innerHTML =
+      '<span class="gmark" aria-label="Google">'
+    + '  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">'
+    + '    <path fill="#4285F4" d="M21.35 11.1H12v2.98h5.55c-.24 1.26-.95 2.33-2.01 3.04v2.52h3.2c1.9-1.72 2.99-4.25 2.99-7.27 0-.7-.06-1.37-.18-2.01z"></path>'
+    + '    <path fill="#34A853" d="M12 22c2.67 0 4.9-.88 6.54-2.36l-3.2-2.52c-.9.6-2.04.95-3.34.95-2.56 0-4.73-1.73-5.5-4.05H3.4v2.56C5.14 20.65 8.32 22 12 22z"></path>'
+    + '    <path fill="#FBBC05" d="M6.5 14.02c-.18-.55-.28-1.14-.28-1.74s.1-1.19.28-1.74V7.64H3.4a9.99 9.99 0 0 0 0 8.72h3.1V14.02z"></path>'
+    + '    <path fill="#EA4335" d="M12 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12 2C8.22 2 5 4.17 3.22 7.64l3.1 2.56C7.1 7.88 9.26 5.5 12 5.5z"></path>'
+    + '  </svg>'
+    + '</span>'
+    + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>'
+    + '<span class="badgeText" aria-label="Verified by Evid">'
+    + '  <span class="verified">מאומת</span>'
+    + '  <span class="evid">EVID<span class="tick" aria-hidden="true">✓</span></span>'
+    + '</span>';
 
     card.appendChild(header); card.appendChild(body); card.appendChild(brand);
     return card;
@@ -216,10 +193,9 @@
     if(!items.length) return;
     var card=renderCard(items[idx % items.length]); idx++;
     wrap.innerHTML=""; wrap.appendChild(card);
-    setTimeout(function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); }, Math.max(0, SHOW_MS - 350));
+    setTimeout(function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); }, Math.max(0, SHOW_MS - FADE_MS));
     setTimeout(function(){ if(card && card.parentNode){ card.parentNode.removeChild(card); } }, SHOW_MS);
   }
-
   function start(){
     if(loop) clearInterval(loop);
     if(!items.length){
@@ -238,25 +214,23 @@
     return fetch(url, {method:"GET", credentials:"omit", cache:"no-store"})
       .then(function(res){ return res.text().then(function(raw){ if(!res.ok) throw new Error(raw || ("HTTP "+res.status)); return raw; }); });
   }
-  function fetchJSON(url){
-    return fetchText(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } });
-  }
+  function fetchJSON(url){ return fetchText(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } }); }
 
   function loadAll(){
-    var p1 = REVIEWS_EP ? fetchJSON(REVIEWS_EP).then(function(d){ return normalizeArray(d,"review"); }).catch(function(e){ log("reviews fetch err:", e); return []; }) : Promise.resolve([]);
+    var p1 = REVIEWS_EP   ? fetchJSON(REVIEWS_EP).then(function(d){ return normalizeArray(d,"review");   }).catch(function(e){ log("reviews fetch err:", e); return []; }) : Promise.resolve([]);
     var p2 = PURCHASES_EP ? fetchJSON(PURCHASES_EP).then(function(d){ return normalizeArray(d,"purchase");}).catch(function(e){ log("purchases fetch err:", e); return []; }) : Promise.resolve([]);
     Promise.all([p1,p2]).then(function(r){
-      var rev = r[0]||[], pur = r[1]||[];
+      var rev = (r[0]||[]).filter(function(x){ return (x.text||"").trim(); });
+      var pur = r[1]||[];
       log("counts:", rev.length, pur.length);
       items = interleave(rev, pur);
       start();
     }).catch(function(e){
       root.innerHTML =
         '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Widget error: '+ String(e && e.message || e) +'</div>';
-      console.error("[both-controller v3.2.0]", e);
+      console.error("[both-controller v3.3.0]", e);
     });
   }
 
   loadAll();
 })();
-
