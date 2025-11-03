@@ -1,4 +1,4 @@
-/*! both-controller v3.5.9 — reviews + purchases; purchase UI revamped */
+/*! both-controller v3.6.0 — reviews + purchases; purchase UI matches "new version" mock */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -17,7 +17,7 @@
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
 
-  function log(){ if (DEBUG) { var a=["[both-controller v3.5.9]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if (DEBUG) { var a=["[both-controller v3.6.0]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!REVIEWS_EP && !PURCHASES_EP) {
     root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Missing endpoints.</div>';
@@ -32,8 +32,8 @@
   + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}'
   + '.wrap *{font-family:inherit;box-sizing:border-box;}'
 
-  /* Card */
-  + '.card{position:relative;width:360px;max-width:92vw;background:#fff;color:#0b1220;border-radius:18px;box-shadow:0 16px 40px rgba(2,6,23,.18);border:1px solid rgba(2,6,23,.06);overflow:hidden;}'
+  /* Card shell */
+  + '.card{position:relative;width:370px;max-width:92vw;background:#fff;color:#0b1220;border-radius:18px;box-shadow:0 16px 40px rgba(2,6,23,.18);border:1px solid rgba(2,6,23,.06);overflow:hidden;}'
 
   /* Close button */
   + '.xbtn{position:absolute;top:10px;left:10px;appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
@@ -55,25 +55,35 @@
   + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-  /* -------- Purchases (NEW) --------
-     Grid is LTR so columns are stable: [text | media]
-     Text itself remains RTL; image sits on the RIGHT; time centered under image. */
-  + '.row-p{display:grid;grid-template-columns:1fr 120px;grid-template-areas:"text media";gap:16px;align-items:center;padding:16px 16px 10px;direction:ltr;}'
+  /* -------- Purchases (EXACT mock) --------
+     Top row: [text | image]; Bottom row: [badge | time].
+     Use LTR for layout stability, RTL inside text only. */
+  + '.p-top{display:grid;grid-template-columns:1fr 156px;gap:16px;align-items:center;padding:16px 16px 8px;direction:ltr;}'
 
-  /* Media (image + time) — RIGHT column */
-  + '.pmedia{grid-area:media;justify-self:end;display:flex;flex-direction:column;align-items:center;gap:8px;}'
-  + '.pimg{width:108px;height:108px;border-radius:14px;object-fit:cover;background:#eef2f7;display:block;border:1px solid rgba(2,6,23,.08);}'
-  + '.pimg-fallback{width:108px;height:108px;border-radius:14px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#475569;border:1px solid rgba(2,6,23,.08);}'
-  + '.ptime{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;color:#475569;margin-top:6px;text-align:center;direction:rtl;}'
-  + '.ptime svg{width:14px;height:14px;opacity:.85;display:block;}'
-
-  /* Text — LEFT column, but Hebrew content RTL inside */
-  + '.ptext{grid-area:text;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:8px;min-width:0;direction:rtl;}'
-  + '.pbadge{align-self:flex-end;display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 12px;border-radius:999px;background:#e9f8ec;border:1px solid #bfe8c8;font-size:12px;font-weight:700;color:#198038;white-space:nowrap;}'
-  + '.pbadge .check{width:16px;height:16px;display:inline-block;}'
-  + '.psentence{max-width:100%;text-align:right;font-size:15px;line-height:1.35;word-break:break-word;white-space:normal;}'
+  /* Text column (RTL content, vertically centered) */
+  + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:6px;align-items:flex-end;justify-content:center;direction:rtl;}'
+  + '.psentence{max-width:100%;text-align:right;font-size:15px;line-height:1.35;word-break:break-word;}'
   + '.psentence .buyer{font-weight:700;}'
   + '.psentence .prod{font-weight:700;color:#2578ff;}'
+
+  /* Image column — framed image */
+  + '.pmedia{grid-column:2;justify-self:end;display:flex;align-items:center;justify-content:center;}'
+  + '.pframe{width:148px;height:108px;border-radius:14px;border:2px solid #dfe7f0;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;}'
+  + '.pimg{width:100%;height:100%;object-fit:contain;background:#fff;display:block;}'
+  + '.pimg-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#475569;font-weight:700;background:#f1f5f9;}'
+
+  /* Bottom row (footer): badge LEFT, time RIGHT */
+  + '.p-foot{display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:6px 16px 14px;gap:12px;direction:ltr;}'
+  + '.foot-left{justify-self:start;}'
+  + '.foot-right{justify-self:end;}'
+
+  /* Badge pill */
+  + '.pbadge{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 12px;border-radius:999px;background:#e9f8ec;border:1px solid #bfe8c8;font-size:12px;font-weight:700;color:#198038;white-space:nowrap;}'
+  + '.pbadge .check{width:16px;height:16px;display:inline-block;}'
+
+  /* Time (clock + label), centered inline for its side */
+  + '.ptime{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#475569;text-align:right;direction:rtl;}'
+  + '.ptime svg{width:14px;height:14px;opacity:.85;display:block;}'
 
   /* Animations */
   + '.fade-in{animation:fadeIn .35s ease forwards;} .fade-out{animation:fadeOut .35s ease forwards;}'
@@ -81,18 +91,19 @@
   + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
 
   /* Desktop */
-  + '@media (min-width:720px){ .row-p{grid-template-columns:1fr 132px;} .pimg,.pimg-fallback{width:120px;height:120px;} }'
+  + '@media (min-width:720px){ .p-top{grid-template-columns:1fr 168px;} .pframe{width:160px;height:116px;} }'
 
-  /* Mobile */
+  /* Mobile tweaks */
   + '@media (max-width:480px){'
-  + '  .card{width:320px;}'
+  + '  .card{width:330px;}'
   + '  .row-r{grid-template-columns:34px 1fr 24px;gap:8px;padding:10px 10px 6px;}'
   + '  .avatar,.avatar-fallback{width:34px;height:34px;}'
   + '  .name{font-size:13px;}'
   + '  .body{font-size:13px;line-height:1.3;padding:0 10px 10px;}'
-  + '  .row-p{grid-template-columns:1fr 112px;gap:12px;padding:12px 12px 8px;}'
-  + '  .pimg,.pimg-fallback{width:104px;height:104px;}'
+  + '  .p-top{grid-template-columns:1fr 144px;padding:14px 12px 6px;gap:12px;}'
+  + '  .pframe{width:144px;height:104px;}'
   + '  .psentence{font-size:14px;}'
+  + '  .p-foot{padding:6px 12px 12px;}'
   + '  .ptime{font-size:11.5px;}'
   + '  .pbadge{height:24px;padding:0 10px;font-size:11.5px;}'
   + '}'
@@ -205,7 +216,7 @@
       + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path>'
       + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
       + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
-      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48ל2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
+      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
       + '  </svg>'
       + '</span>'
       + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>'
@@ -221,22 +232,20 @@
     x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
     card.appendChild(x);
 
-    var row=document.createElement("div"); row.className="row-p";
+    /* ---------- TOP ROW: text (left) | image (right) ---------- */
+    var top=document.createElement("div"); top.className="p-top";
 
-    /* LEFT: text (RTL inside) */
+    // TEXT
     var textCol=document.createElement("div"); textCol.className="ptext";
-    var pill=document.createElement("div"); pill.className="pbadge";
-    pill.innerHTML = '<svg class="check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#2ecc71" opacity=".18"/><path d="M10.2 14.6l-2.1-2.1-1.4 1.4 3.5 3.5 6-6-1.4-1.4-4.6 4.6z" fill="#1a9f4b"/></svg><span>מאומת</span><span style="font-weight:700;">EVID</span>';
-    textCol.appendChild(pill);
-
     var sentence=document.createElement("div"); sentence.className="psentence";
     var buyerFirst = firstName(p.buyer);
     sentence.innerHTML = '<strong class="buyer">'+escapeHTML(buyerFirst)+'</strong> רכש/ה '
                        + '<span class="prod">'+escapeHTML(p.product)+'</span>';
     textCol.appendChild(sentence);
 
-    /* RIGHT: media (image + time) stacked */
+    // MEDIA (framed image)
     var media=document.createElement("div"); media.className="pmedia";
+    var frame=document.createElement("div"); frame.className="pframe";
     var imgEl;
     function fb(){ var d=document.createElement("div"); d.className="pimg-fallback"; d.textContent="✓"; return d; }
     function swap(el){ if(imgEl && imgEl.parentNode){ imgEl.parentNode.replaceChild(el, imgEl);} imgEl = el; }
@@ -247,16 +256,37 @@
       pre.onerror = function(){ swap(fb()); };
       pre.src = p.image; imgEl = fb();
     } else { imgEl = fb(); }
-    media.appendChild(imgEl);
+    frame.appendChild(imgEl);
+    media.appendChild(frame);
 
+    top.appendChild(textCol);
+    top.appendChild(media);
+    card.appendChild(top);
+
+    /* ---------- FOOTER: badge (left) | time (right) ---------- */
+    var foot=document.createElement("div"); foot.className="p-foot";
+
+    var left=document.createElement("div"); left.className="foot-left";
+    var pill=document.createElement("div"); pill.className="pbadge";
+    pill.innerHTML = '<svg class="check" viewBox="0 0 24 24" aria-hidden="true">'
+                   +   '<circle cx="12" cy="12" r="11" fill="#2ecc71" opacity=".18"/>' 
+                   +   '<path d="M10.2 14.6l-2.1-2.1-1.4 1.4 3.5 3.5 6-6-1.4-1.4-4.6 4.6z" fill="#1a9f4b"/>'
+                   + '</svg>'
+                   + '<span>מאומת</span><span style="font-weight:700;">EVID</span>';
+    left.appendChild(pill);
+
+    var right=document.createElement("div"); right.className="foot-right";
     var t=document.createElement("div"); t.className="ptime";
-    t.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="#7b8794" stroke-width="1.5" fill="none"/><path d="M12 7v5l3 2" stroke="#7b8794" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'+escapeHTML(timeAgo(p.purchased_at));
-    media.appendChild(t);
+    t.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
+                +   '<circle cx="12" cy="12" r="9" stroke="#7b8794" stroke-width="1.5" fill="none"/>'
+                +   '<path d="M12 7v5l3 2" stroke="#7b8794" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+                + '</svg>' + escapeHTML(timeAgo(p.purchased_at));
+    right.appendChild(t);
 
-    row.appendChild(textCol);
-    row.appendChild(media);
+    foot.appendChild(left);
+    foot.appendChild(right);
+    card.appendChild(foot);
 
-    card.appendChild(row);
     return card;
   }
 
@@ -270,7 +300,11 @@
     return out;
   }
 
-  var items=[], idx=0, loop=null;
+  var wrap = null, items=[], idx=0, loop=null;
+  wrap = document.createElement("div");
+  wrap.className = "wrap";
+  root.appendChild(wrap);
+
   function showNext(){
     if(!items.length) return;
     var itm = items[idx % items.length]; idx++;
@@ -298,7 +332,7 @@
       start();
     }).catch(function(e){
       root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Widget error: '+ String(e && e.message || e) +'</div>';
-      console.error("[both-controller v3.5.9]", e);
+      console.error("[both-controller v3.6.0]", e);
     });
   }
 
