@@ -1,4 +1,4 @@
-/*! both-controller v3.6.2 — reviews + purchases; purchase UI per latest mock */
+/*! both-controller v3.6.3 — robust data parsing + your finalized purchase UI */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -7,7 +7,7 @@
   var scripts = document.scripts;
   var scriptEl = document.currentScript || scripts[scripts.length - 1];
 
-  /* ---- config (from the <script ...> tag) ---- */
+  /* ---- config ---- */
   var REVIEWS_EP   = scriptEl && scriptEl.getAttribute("data-reviews-endpoint");
   var PURCHASES_EP = scriptEl && scriptEl.getAttribute("data-purchases-endpoint");
   var SHOW_MS   = Number((scriptEl && scriptEl.getAttribute("data-show-ms"))       || 15000);
@@ -17,7 +17,7 @@
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
 
-  function log(){ if (DEBUG) { var a=["[both-controller v3.6.2]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if (DEBUG) { var a=["[both-controller v3.6.3]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!REVIEWS_EP && !PURCHASES_EP) {
     root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Missing endpoints.</div>';
@@ -55,7 +55,7 @@
   + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-  /* -------- Purchases (mock exact) -------- */
+  /* -------- Purchases (finalized layout) -------- */
   /* Top row: text (left) | framed image (right) */
   + '.p-top{display:grid;grid-template-columns:1fr 156px;gap:16px;align-items:center;padding:16px 16px 8px;direction:ltr;}'
   + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:6px;align-items:flex-end;justify-content:center;direction:rtl;}'
@@ -67,7 +67,6 @@
   + '.pframe{position:relative;width:148px;height:108px;border-radius:14px;border:2px solid #dfe7f0;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;}'
   + '.pimg{width:100%;height:100%;object-fit:contain;background:#fff;display:block;}'
   + '.pimg-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#475569;font-weight:700;background:#f1f5f9;}'
-  /* cart overlay */
   + '.pcart{position:absolute;top:-10px;right:-10px;width:32px;height:32px;border-radius:50%;border:2px solid #fff;box-shadow:0 10px 18px rgba(2,6,23,.18);object-fit:cover;background:#fff;}'
 
   /* Bottom row: badge (left) | time (right) */
@@ -75,11 +74,9 @@
   + '.foot-left{justify-self:start;}'
   + '.foot-right{justify-self:end;}'
 
-  /* Badge pill — direction LTR so it reads: [✓] מאומת EVID */
   + '.pbadge{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 12px;border-radius:999px;background:#e9f8ec;border:1px solid #bfe8c8;font-size:12px;font-weight:700;color:#198038;white-space:nowrap;direction:ltr;}'
   + '.pbadge .check{width:16px;height:16px;display:inline-block;}'
 
-  /* Time in black (clock uses currentColor) */
   + '.ptime{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#000;text-align:right;direction:rtl;}'
   + '.ptime svg{width:14px;height:14px;opacity:.95;display:block;}'
 
@@ -91,7 +88,7 @@
   /* Desktop */
   + '@media (min-width:720px){ .p-top{grid-template-columns:1fr 168px;} .pframe{width:160px;height:116px;} }'
 
-  /* Mobile tweaks */
+  /* Mobile */
   + '@media (max-width:480px){'
   + '  .card{width:330px;}'
   + '  .row-r{grid-template-columns:34px 1fr 24px;gap:8px;padding:10px 10px 6px;}'
@@ -149,7 +146,55 @@
   }
   function renderAvatarLazy(name, url){ return renderAvatar(name, url); }
 
-  /* ---- jsDelivr mirror failover for JSON endpoints ---- */
+  /* ---- robust parsers ---- */
+  function getPhotoUrl(o){
+    if(!o||typeof o!=="object") return "";
+    var k=Object.keys(o); for(var i=0;i<k.length;i++){ var n=k[i], ln=n.toLowerCase();
+      if(ln==="photo"||ln==="reviewerphotourl"||ln==="profilephotourl"||ln==="profile_photo_url"||ln==="photourl"||ln==="image"||ln==="imageurl"||ln==="avatar"||ln==="avatarurl"||ln==="productimage"){
+        var v = (o[n]==null?"":String(o[n])).trim(); if(v) return v;
+      } }
+    return "";
+  }
+
+  function normReview(x){ 
+    return { kind:"review",
+      authorName:x.authorName||x.userName||x.Header||x.name||x.author||"Anonymous",
+      text:x.text||x.reviewText||x.Content||x.content||"",
+      rating:x.rating||x.stars||x.score||5,
+      profilePhotoUrl:x.Photo||x.reviewerPhotoUrl||getPhotoUrl(x)
+    };
+  }
+
+  function normPurchase(x){
+    return { kind:"purchase",
+      buyer:x.buyer||x.buyerName||x.customerName||x.name||x.customer||"לקוח/ה",
+      product:x.product||x.productName||x.item||x.title||"מוצר",
+      image:x.productImage||x.image||getPhotoUrl(x)||"",
+      purchased_at:x.purchased_at||x.created_at||x.time||x.timestamp||new Date().toISOString()
+    };
+  }
+
+  function normalizeArray(data, as){
+    var arr=[];
+    if(Array.isArray(data)) arr=data;
+    else if(data&&typeof data==="object"){
+      if(Array.isArray(data.items))      arr=data.items;
+      else if(Array.isArray(data.data))  arr=data.data;
+      else if(Array.isArray(data.results)) arr=data.results;
+      else if(Array.isArray(data.records)) arr=data.records;
+      else if(Array.isArray(data.reviews)) arr=data.reviews;
+      else if(Array.isArray(data.purchases)) arr=data.purchases;
+      else if(Array.isArray(data.purchase))  arr=data.purchase;
+      else if(Array.isArray(data.orders))    arr=data.orders;
+      else if(Array.isArray(data.events))    arr=data.events;
+      else if(data.text||data.Content||data.reviewText||data.content||data.product||data.item||data.title) arr=[data];
+    }
+    if(as==="review")   return arr.map(normReview);
+    if(as==="purchase") return arr.map(normPurchase);
+    return arr;
+  }
+
+  /* ---- fetchers with mirror failover (for JSON endpoints) ---- */
   var JS_MIRRORS = ["https://cdn.jsdelivr.net","https://fastly.jsdelivr.net","https://gcore.jsdelivr.net"];
   function rewriteToMirror(u, mirror){
     try { var a=new URL(u), m=new URL(mirror); a.protocol=m.protocol; a.host=m.host; return a.toString(); } catch(_){ return u; }
@@ -205,8 +250,8 @@
       + '  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">'
       + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path>'
       + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
-      + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64Η3.4a9.82 9.82 0 0 0 0 8.72"></path>'
-      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
+      + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0  0 0 0 8.72"></path>'
+      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0  0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
       + '  </svg>'
       + '</span>'
       + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>'
@@ -222,10 +267,9 @@
     x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
     card.appendChild(x);
 
-    /* ---------- TOP ROW: text (left) | image (right) ---------- */
+    /* ---------- TOP ROW ---------- */
     var top=document.createElement("div"); top.className="p-top";
 
-    // TEXT (RTL inside)
     var textCol=document.createElement("div"); textCol.className="ptext";
     var sentence=document.createElement("div"); sentence.className="psentence";
     var buyerFirst = firstName(p.buyer);
@@ -233,13 +277,11 @@
                        + '<span class="prod">'+escapeHTML(p.product)+'</span>';
     textCol.appendChild(sentence);
 
-    // MEDIA (framed image + cart overlay)
     var media=document.createElement("div"); media.className="pmedia";
     var frame=document.createElement("div"); frame.className="pframe";
     var imgEl;
     function fb(){ var d=document.createElement("div"); d.className="pimg-fallback"; d.textContent="✓"; return d; }
     function swap(el){ if(imgEl && imgEl.parentNode){ imgEl.parentNode.replaceChild(el, imgEl);} imgEl = el; }
-
     if (p.image) {
       var pre = new Image(); pre.decoding="async"; pre.loading="eager";
       pre.onload = function(){ var tag=document.createElement("img"); tag.className="pimg"; tag.alt=""; tag.src=p.image; swap(tag); };
@@ -248,12 +290,9 @@
     } else { imgEl = fb(); }
     frame.appendChild(imgEl);
 
-    // cart overlay (top-right)
     var cart = document.createElement("img");
     cart.className = "pcart";
-    cart.alt = "";
-    cart.decoding = "async";
-    cart.loading  = "lazy";
+    cart.alt = ""; cart.decoding="async"; cart.loading="lazy";
     cart.src = "https://media.istockphoto.com/id/898475764/vector/shopping-trolley-cart-icon-in-green-circle-vector.jpg?s=612x612&w=0&k=20&c=W_b90qFRpj_FyLyI19xWqB6EoNSuJYwMSN9nnKkE9Hk=";
     frame.appendChild(cart);
 
@@ -262,12 +301,11 @@
     top.appendChild(media);
     card.appendChild(top);
 
-    /* ---------- FOOTER: badge (left) | time (right) ---------- */
+    /* ---------- FOOTER ---------- */
     var foot=document.createElement("div"); foot.className="p-foot";
 
     var left=document.createElement("div"); left.className="foot-left";
     var pill=document.createElement("div"); pill.className="pbadge";
-    // ✔ Order: מאומת before EVID (tick stays where it is)
     pill.innerHTML = '<svg class="check" viewBox="0 0 24 24" aria-hidden="true">'
                    +   '<circle cx="12" cy="12" r="11" fill="#2ecc71" opacity=".18"/>' 
                    +   '<path d="M10.2 14.6l-2.1-2.1-1.4 1.4 3.5 3.5 6-6-1.4-1.4-4.6 4.6z" fill="#1a9f4b"/>'
@@ -277,7 +315,6 @@
 
     var right=document.createElement("div"); right.className="foot-right";
     var t=document.createElement("div"); t.className="ptime";
-    // clock uses stroke="currentColor" so .ptime{color:#000} makes it black
     t.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
                 +   '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>'
                 +   '<path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
@@ -301,6 +338,10 @@
     return out;
   }
 
+  var wrap = document.createElement("div");
+  wrap.className = "wrap";
+  root.appendChild(wrap);
+
   var items=[], idx=0, loop=null;
 
   function showNext(){
@@ -321,17 +362,18 @@
     else { showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS); }
   }
 
-  /* ---- data loading (with jsDelivr mirror failover) ---- */
+  /* ---- data loading ---- */
   function loadAll(){
-    var p1 = REVIEWS_EP ? fetchJSON(REVIEWS_EP).then(function(d){ return normalizeArray(d,"review"); }).catch(function(e){ log("reviews fetch err:", e); return []; }) : Promise.resolve([]);
-    var p2 = PURCHASES_EP ? fetchJSON(PURCHASES_EP).then(function(d){ return normalizeArray(d,"purchase");}).catch(function(e){ log("purchases fetch err:", e); return []; }) : Promise.resolve([]);
+    var p1 = REVIEWS_EP ? fetchJSON(REVIEWS_EP).then(function(d){ var a=normalizeArray(d,"review"); log("reviews:", a.length); return a; }).catch(function(e){ console.warn("reviews fetch err:", e); return []; }) : Promise.resolve([]);
+    var p2 = PURCHASES_EP ? fetchJSON(PURCHASES_EP).then(function(d){ var a=normalizeArray(d,"purchase"); log("purchases:", a.length); return a; }).catch(function(e){ console.warn("purchases fetch err:", e); return []; }) : Promise.resolve([]);
     Promise.all([p1,p2]).then(function(r){
       var rev = r[0]||[], pur = r[1]||[];
       items = interleave(rev, pur);
+      log("total items:", items.length);
       start();
     }).catch(function(e){
       root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Widget error: '+ String(e && e.message || e) +'</div>';
-      console.error("[both-controller v3.6.2]", e);
+      console.error("[both-controller v3.6.3]", e);
     });
   }
 
