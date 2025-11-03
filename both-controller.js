@@ -60,11 +60,13 @@ style.textContent = ''
 + '.pmedia{grid-area:media;justify-self:start;display:flex;flex-direction:column;align-items:center;gap:8px;}'
 + '.pimg{width:96px;height:96px;border-radius:14px;object-fit:cover;background:#eef2f7;display:block;border:1px solid rgba(2,6,23,.06);}'
 + '.pimg-fallback{width:96px;height:96px;border-radius:14px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#475569;}'
-+ '.ptime{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#475569;direction:rtl;margin-top:6px;transform:translateX(-6px);}'
+/* TIME: centered under image, slight left nudge */
++ '.ptime{width:96px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;color:#475569;direction:rtl;margin-top:6px;transform:translateX(-6px);}'
 + '.ptime svg{width:14px;height:14px;display:block;opacity:.9;}'
 
+/* TEXT: lifted up a bit; tag above sentence */
 + '.ptext{grid-area:text;display:flex;flex-direction:column;align-items:flex-end;gap:6px;direction:rtl;margin-top:-6px;}'
-+ '.pbadge{align-self:flex-end;display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 10px;border-radius:999px;background:#e9f8ec;border:1px solid #bfe8c8;font-size:12px;font-weight:700;color:#198038;white-space:nowrap;}'
++ '.pbadge{align-self:flex-end;display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 10px;border-radius:999px;background:#e9f8ec;border:1px solid #bfe8c8;font-size:12px;font-weight:700;color:#198038;white-space:nowrap;margin:0 0 2px 0;}'
 + '.pbadge .check{width:16px;height:16px;display:inline-block;}'
 + '.psentence{text-align:right;font-size:15px;line-height:1.3;}'
 + '.psentence .buyer{font-weight:700;}'
@@ -75,10 +77,10 @@ style.textContent = ''
 + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
 + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
 
-/* Desktop slightly larger image */
-+ '@media (min-width:720px){ .row-p{grid-template-columns:120px 1fr;} .pimg,.pimg-fallback{width:112px;height:112px;} }'
+/* Desktop slightly larger image (keep time centered) */
++ '@media (min-width:720px){ .row-p{grid-template-columns:120px 1fr;} .pimg,.pimg-fallback{width:112px;height:112px;} .ptime{width:112px;} }'
 
-/* Mobile compact */
+/* Mobile compact (keep time centered) */
 + '@media (max-width:480px){'
 + '  .card{width:300px}'
 + '  .row-r{grid-template-columns:34px 1fr 24px;gap:8px;padding:10px 10px 6px}'
@@ -88,11 +90,12 @@ style.textContent = ''
 + '  .row-p{grid-template-columns:100px 1fr;gap:10px;padding:12px 10px 4px}'
 + '  .pimg,.pimg-fallback{width:92px;height:92px}'
 + '  .psentence{font-size:14px}'
-+ '  .ptime{font-size:11.5px;transform:translateX(-4px)}'
++ '  .ptime{width:92px;font-size:11.5px;transform:translateX(-4px)}'
 + '  .pbadge{height:24px;padding:0 8px;font-size:11.5px}'
 + '}'
 ;
 root.appendChild(style);
+
 
   var wrap = document.createElement("div");
   wrap.className = "wrap";
