@@ -281,12 +281,28 @@ root.appendChild(style);
     frame.appendChild(imgEl);
     media.appendChild(frame);
 
-    // cart overlay ABOVE the frame (not clipped)
-    var cart = document.createElement("img");
-    cart.className = "pcart";
-    cart.alt = ""; cart.decoding="async"; cart.loading="lazy";
-    cart.src = "https://media.istockphoto.com/id/898475764/vector/shopping-trolley-cart-icon-in-green-circle-vector.jpg?s=612x612&w=0&k=20&c=W_b90qFRpj_FyLyI19xWqB6EoNSuJYwMSN9nnKkE9Hk=";
-    media.appendChild(cart);
+    // cart overlay ABOVE the frame (not clipped, with size protection)
+var cart = document.createElement("img");
+cart.className = "pcart";
+cart.alt = "";
+cart.src = "https://media.istockphoto.com/id/898475764/vector/shopping-trolley-cart-icon-in-green-circle-vector.jpg?s=612x612&w=0&k=20&c=W_b90qFRpj_FyLyI19xWqB6EoNSuJYwMSN9nnKkE9Hk=";
+cart.style.width = "34px";
+cart.style.height = "34px";
+cart.style.maxWidth = "100%";
+cart.style.maxHeight = "100%";
+cart.style.objectFit = "contain";
+cart.style.borderRadius = "50%";
+cart.style.border = "2px solid white";
+cart.style.boxShadow = "0 10px 18px rgba(0,0,0,0.18)";
+cart.style.background = "#fff";
+cart.style.position = "absolute";
+cart.style.top = "-12px";
+cart.style.right = "-12px";
+cart.style.zIndex = "2";
+cart.style.pointerEvents = "none";
+
+media.appendChild(cart);
+
 
     top.appendChild(textCol);
     top.appendChild(media);
