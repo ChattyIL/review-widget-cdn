@@ -1,8 +1,6 @@
-// both-controller v3.5.5 — ES5-safe, unified UI.
-// Reviews: original styling (Google mark + stars + optional EVID badge).
-// Purchases: RTL layout — LEFT = text (badge + sentence), RIGHT = image over time.
-// X button pinned top-left. First name bold; product name bold + light blue.
-
+// both-controller v3.5.6 — ES5-safe, reviews + purchases with fixed 2-column layout.
+// Purchases: text LEFT, media (image + time) RIGHT. Verified pill above text. X top-left.
+// Reviews unchanged (Google mark + stars + optional EVID badge).
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -11,7 +9,7 @@
   var scripts = document.scripts;
   var scriptEl = document.currentScript || scripts[scripts.length - 1];
 
-  // ---- config from embed ----
+  // ---- config ----
   var REVIEWS_EP   = scriptEl && scriptEl.getAttribute("data-reviews-endpoint");
   var PURCHASES_EP = scriptEl && scriptEl.getAttribute("data-purchases-endpoint");
   var SHOW_MS   = Number((scriptEl && scriptEl.getAttribute("data-show-ms"))       || 15000);
@@ -21,7 +19,7 @@
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
 
-  function log(){ if (DEBUG) { var a=["[both-controller v3.5.5]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if (DEBUG) { var a=["[both-controller v3.5.6]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!REVIEWS_EP && !PURCHASES_EP) {
     root.innerHTML =
@@ -32,71 +30,58 @@
   // ---- styles ----
   var style = document.createElement("style");
   style.textContent = ''
-    + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
-    + ':host{all:initial;}'
-    + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}'
+  + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
+  + ':host{all:initial;}'
+  + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}'
 
-    /* Card */
-    + '.card{position:relative;width:340px;max-width:90vw;background:#fff;color:#0b1220;border-radius:18px;'
-    + 'box-shadow:0 16px 40px rgba(2,6,23,.18);border:1px solid rgba(2,6,23,.06);overflow:hidden;}'
+  /* Card */
+  + '.card{position:relative;width:340px;max-width:90vw;background:#fff;color:#0b1220;border-radius:18px;box-shadow:0 16px 40px rgba(2,6,23,.18);border:1px solid rgba(2,6,23,.06);overflow:hidden;}'
 
-    /* Close (top-left) */
-    + '.xbtn{position:absolute;top:8px;left:10px;appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;'
-    + 'display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
-    + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;} .xbtn:active{transform:translateY(0);}'
+  /* X button (absolute top-left) */
+  + '.xbtn{position:absolute;top:10px;left:10px;appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
+  + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;} .xbtn:active{transform:translateY(0);}'
 
-    /* Default (reviews) header/body/footer */
-    + '.row{display:grid;grid-template-columns:40px 1fr 24px;gap:12px;align-items:center;padding:12px 12px 8px;direction:auto;}'
-    + '.meta{display:flex;flex-direction:column;gap:4px;}'
-    + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
-    + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;}'
-    + '.body.small{font-size:12.5px;} .body.tiny{font-size:11.5px;}'
-    + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#eef2f7;display:block;border:1px solid rgba(2,6,23,.06);}'
-    + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;}'
-    + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(2,6,23,.07);font-size:12px;opacity:.95;direction:rtl;}'
-    + '.gmark{display:flex;align-items:center;}'
-    + '.gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
-    + '.badgeText{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.9;}'
-    + '.badgeText .verified{color:#444;font-weight:600;}'
-    + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
-    + '.badgeText .tick{font-size:12px;line-height:1;}'
+  /* Reviews (unchanged) */
+  + '.row-r{display:grid;grid-template-columns:40px 1fr 24px;gap:12px;align-items:center;padding:12px 12px 8px;}'
+  + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#eef2f7;display:block;border:1px solid rgba(2,6,23,.06);}'
+  + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;}'
+  + '.meta{display:flex;flex-direction:column;gap:4px;}'
+  + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
+  + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;}'
+  + '.body.small{font-size:12.5px;} .body.tiny{font-size:11.5px;}'
+  + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(2,6,23,.07);font-size:12px;opacity:.95;direction:rtl;}'
+  + '.gmark{display:flex;align-items:center;}'
+  + '.gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
+  + '.badgeText{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.9;}'
+  + '.badgeText .verified{color:#444;font-weight:600;}'
+  + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
+  + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-    /* Purchases layout: text LEFT, image+time RIGHT (RTL) */
-    + '.row-p{direction:rtl;display:grid;grid-template-columns:1fr 96px;column-gap:14px;align-items:center;padding:16px 14px 10px;}'
-    + '.textcol{display:flex;flex-direction:column;gap:6px;align-items:flex-start;}'
-    + '.verifyPill{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:9999px;background:#e8f8ea;border:1px solid #bfe8c7;'
-    + 'font-weight:700;font-size:12px;color:#15803d;}'
-    + '.verifyPill .dot{display:inline-block;width:18px;height:18px;border-radius:9999px;background:#22c55e;color:#fff;'
-    + 'display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1;}'
-    + '.psentence{font-size:15px;line-height:1.25;text-align:right;}'
-    + '.psentence .buyer{font-weight:700;}'
-    + '.psentence .prod{font-weight:700;color:#1e90ff;}'
-    + '.pcol{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}'
-    + '.pimg{width:96px;height:96px;border-radius:14px;object-fit:cover;background:#eef2f7;display:block;border:1px solid rgba(2,6,23,.06);}'
-    + '.pimg-fallback{width:96px;height:96px;border-radius:14px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#475569;}'
-    + '.ptime{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#475569;}'
-    + '.ptime svg{width:14px;height:14px;display:block;opacity:.9;}'
+  /* Purchases: 2 columns — text LEFT, media RIGHT */
+  + '.row-p{display:grid;grid-template-columns:1fr 108px;gap:14px;align-items:center;padding:16px 14px 6px;direction:rtl;}'
+  + '.ptext{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}'
+  + '.psentence{direction:rtl;text-align:right;font-size:15px;line-height:1.3;}'
+  + '.psentence .buyer{font-weight:700;}'
+  + '.psentence .prod{font-weight:700;color:#2578ff;}'
+  + '.pbadge{align-self:flex-end;display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 12px;border-radius:999px;background:#e9f8ec;border:1px solid #bfe8c8;font-size:13px;font-weight:700;color:#198038;}'
+  + '.pbadge .check{width:18px;height:18px;display:inline-block;}'
 
-    /* Animations */
-    + '.fade-in{animation:fadeIn .35s ease forwards;} .fade-out{animation:fadeOut .35s ease forwards;}'
-    + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
-    + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
+  + '.pmedia{justify-self:end;display:flex;flex-direction:column;align-items:flex-end;gap:8px;}'
+  + '.pimg{width:96px;height:96px;border-radius:14px;object-fit:cover;background:#eef2f7;display:block;border:1px solid rgba(2,6,23,.06);}'
+  + '.pimg-fallback{width:96px;height:96px;border-radius:14px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#475569;}'
+  + '.ptime{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#475569;direction:rtl;padding:0 2px 10px;}'
+  + '.ptime svg{width:14px;height:14px;display:block;opacity:.9;}'
 
-    /* Desktop tweak */
-    + '@media (min-width: 720px){ .psentence{font-size:15.5px;} }'
+  /* Animations */
+  + '.fade-in{animation:fadeIn .35s ease forwards;} .fade-out{animation:fadeOut .35s ease forwards;}'
+  + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
+  + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
 
-    /* Mobile compact */
-    + '@media (max-width:480px){'
-    + '  .card{width:300px}'
-    + '  .row{grid-template-columns:34px 1fr 22px;gap:8px;padding:10px 10px 6px}'
-    + '  .avatar,.avatar-fallback{width:34px;height:34px}'
-    + '  .name{font-size:13px}'
-    + '  .body{font-size:13px;line-height:1.3;padding:0 10px 10px}'
-    + '  .badgeText{font-size:11px} .gstars{font-size:12px}'
-    + '  .row-p{grid-template-columns:1fr 84px;column-gap:10px;padding:12px 10px 8px}'
-    + '  .pimg,.pimg-fallback{width:84px;height:84px}'
-    + '  .verifyPill{font-size:11.5px;padding:5px 10px}'
-    + '}'
+  /* Desktop slightly larger image */
+  + '@media (min-width:720px){ .row-p{grid-template-columns:1fr 112px;} .pimg,.pimg-fallback{width:112px;height:112px;} }'
+
+  /* Mobile compact */
+  + '@media (max-width:480px){ .card{width:300px} .row-r{grid-template-columns:34px 1fr 24px;gap:8px;padding:10px 10px 6px} .avatar,.avatar-fallback{width:34px;height:34px} .name{font-size:13px} .body{font-size:13px;line-height:1.3;padding:0 10px 10px} .row-p{grid-template-columns:1fr 92px;gap:10px;padding:12px 10px 4px} .pimg,.pimg-fallback{width:92px;height:92px} .psentence{font-size:14px} .ptime{font-size:11.5px} .pbadge{height:26px;padding:0 10px;font-size:12px} }'
   ;
   root.appendChild(style);
 
@@ -107,7 +92,8 @@
   // ---- helpers ----
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
-  function firstName(s){ s=(s||"").trim(); var a=s.split(/\s+/); return a[0]||s||"לקוח/ה"; }
+  function escapeHTML(s){ return String(s||"").replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]);}); }
+  function firstName(s){ s=String(s||"").trim(); var parts=s.split(/\s+/); return parts[0]||s; }
 
   function renderMonogram(name){
     var d=document.createElement("div");
@@ -116,7 +102,6 @@
     d.style.background=colorFromString(name);
     return d;
   }
-  // Avatar preload (reviews)
   function renderAvatarPreloaded(name, url){
     var shell = renderMonogram(name);
     if(url){
@@ -128,7 +113,7 @@
         tag.width=40; tag.height=40; tag.decoding="async"; tag.loading="eager"; tag.src=url;
         shell.replaceWith(tag);
       };
-      img.onerror = function(){ /* keep monogram */ };
+      img.onerror = function(){};
       img.src = url;
     }
     return shell;
@@ -196,19 +181,18 @@
   // ---- renderers ----
   function renderReviewCard(item){
     var card=document.createElement("div"); card.className="card fade-in";
+    var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
+    x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
+    card.appendChild(x);
 
-    var header=document.createElement("div"); header.className="row";
+    var header=document.createElement("div"); header.className="row-r";
     var avatarEl = renderAvatarPreloaded(item.authorName, item.profilePhotoUrl);
 
     var meta=document.createElement("div"); meta.className="meta";
-    var name=document.createElement("div"); name.className="name";
-    name.textContent=item.authorName||"Anonymous"; meta.appendChild(name);
+    var name=document.createElement("div"); name.className="name"; name.textContent=item.authorName||"Anonymous";
+    meta.appendChild(name);
 
-    var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
-    x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
-
-    header.appendChild(avatarEl); header.appendChild(meta); header.appendChild(x);
-
+    header.appendChild(avatarEl); header.appendChild(meta); header.appendChild(document.createElement("span")); // placeholder for layout
     var body=document.createElement("div");
     var shortText=truncateWords(item.text, MAX_WORDS);
     body.className="body "+scaleClass(shortText); body.textContent=shortText;
@@ -229,65 +213,49 @@
     return card;
   }
 
-  function buildVerifyPill(){
-    var pill=document.createElement("div"); pill.className="verifyPill";
-    var dot=document.createElement("span"); dot.className="dot"; dot.innerHTML="✓";
-    var t=document.createElement("span"); t.textContent="מאומת EVID";
-    pill.appendChild(t); pill.appendChild(dot);
-    return pill;
-  }
-  function buildSentence(buyer, product){
-    var line=document.createElement("div"); line.className="psentence";
-    var b=document.createElement("span"); b.className="buyer"; b.textContent=firstName(buyer||"לקוח/ה");
-    var p=document.createElement("span"); p.className="prod";  p.textContent=product||"מוצר";
-    line.appendChild(b);
-    line.appendChild(document.createTextNode(" רכש/ה "));
-    line.appendChild(p);
-    return line;
-  }
-  function clockSVG(){
-    return '<svg viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-         + '<circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 3"></path></svg>';
-  }
-
   function renderPurchaseCard(p){
     var card=document.createElement("div"); card.className="card fade-in";
 
+    // X (absolute)
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
     x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
     card.appendChild(x);
 
     var row=document.createElement("div"); row.className="row-p";
 
-    // LEFT: text column (badge + sentence)
-    var text=document.createElement("div"); text.className="textcol";
-    text.appendChild(buildVerifyPill());
-    text.appendChild(buildSentence(p.buyer, p.product));
+    // LEFT: text (RTL, right-aligned)
+    var textCol=document.createElement("div"); textCol.className="ptext";
 
-    // RIGHT: product image over time
-    var pcol=document.createElement("div"); pcol.className="pcol";
+    var pill=document.createElement("div"); pill.className="pbadge";
+    pill.innerHTML = '<svg class="check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#2ecc71" opacity=".18"/><path d="M10.2 14.6l-2.1-2.1-1.4 1.4 3.5 3.5 6-6-1.4-1.4-4.6 4.6z" fill="#1a9f4b"/></svg><span>מאומת</span><span style="font-weight:700;">EVID</span>';
+    textCol.appendChild(pill);
 
+    var sentence=document.createElement("div"); sentence.className="psentence";
+    var buyerFirst = firstName(p.buyer);
+    sentence.innerHTML = '<strong class="buyer">'+escapeHTML(buyerFirst)+'</strong> רכש/ה '
+                       + '<span class="prod">'+escapeHTML(p.product)+'</span>';
+    textCol.appendChild(sentence);
+
+    // RIGHT: media (image + time) stacked
+    var media=document.createElement("div"); media.className="pmedia";
     var imgEl;
-    function fallback(){ var d=document.createElement("div"); d.className="pimg-fallback"; d.textContent="✓"; return d; }
-    function swap(el){ if(imgEl && imgEl.parentNode){ imgEl.parentNode.replaceChild(el, imgEl); } imgEl=el; }
+    function fb(){ var d=document.createElement("div"); d.className="pimg-fallback"; d.textContent="✓"; return d; }
+    function swap(el){ if(imgEl && imgEl.parentNode){ imgEl.parentNode.replaceChild(el, imgEl);} imgEl = el; }
 
     if (p.image) {
       var pre = new Image(); pre.decoding="async"; pre.loading="eager";
       pre.onload = function(){ var tag=document.createElement("img"); tag.className="pimg"; tag.alt=""; tag.src=p.image; swap(tag); };
-      pre.onerror = function(){ swap(fallback()); };
-      pre.src = p.image;
-      imgEl = fallback();
-    } else {
-      imgEl = fallback();
-    }
-    pcol.appendChild(imgEl);
+      pre.onerror = function(){ swap(fb()); };
+      pre.src = p.image; imgEl = fb();
+    } else { imgEl = fb(); }
+    media.appendChild(imgEl);
 
-    var time=document.createElement("div"); time.className="ptime";
-    time.innerHTML = clockSVG() + '<span>'+ timeAgo(p.purchased_at) +'</span>';
-    pcol.appendChild(time);
+    var t=document.createElement("div"); t.className="ptime";
+    t.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="#7b8794" stroke-width="1.5" fill="none"/><path d="M12 7v5l3 2" stroke="#7b8794" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'+escapeHTML(timeAgo(p.purchased_at));
+    media.appendChild(t);
 
-    row.appendChild(text);
-    row.appendChild(pcol);
+    row.appendChild(textCol);
+    row.appendChild(media);
 
     card.appendChild(row);
     return card;
@@ -318,14 +286,10 @@
       root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">No items to display.</div>';
       return;
     }
-    if (INIT_MS > 0) {
-      setTimeout(function(){ showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS); }, INIT_MS);
-    } else {
-      showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS);
-    }
+    if (INIT_MS > 0) { setTimeout(function(){ showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS); }, INIT_MS); }
+    else { showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS); }
   }
 
-  // ---- fetch ----
   function fetchText(url){ return fetch(url,{method:"GET",credentials:"omit",cache:"no-store"}).then(function(res){ return res.text().then(function(raw){ if(!res.ok) throw new Error(raw || ("HTTP "+res.status)); return raw; }); }); }
   function fetchJSON(url){ return fetchText(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } }); }
 
@@ -338,7 +302,7 @@
       start();
     }).catch(function(e){
       root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Widget error: '+ String(e && e.message || e) +'</div>';
-      console.error("[both-controller v3.5.5]", e);
+      console.error("[both-controller v3.5.6]", e);
     });
   }
 
