@@ -1,6 +1,4 @@
-// both-controller v3.5.6 — ES5-safe, reviews + purchases with fixed 2-column layout.
-// Purchases: text LEFT, media (image + time) RIGHT. Verified pill above text. X top-left.
-// Reviews unchanged (Google mark + stars + optional EVID badge).
+// both-controller v3.5.7 — ES5-safe, reviews + purchases with fixed 2-col layout + jsDelivr failover
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -19,11 +17,10 @@
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
 
-  function log(){ if (DEBUG) { var a=["[both-controller v3.5.6]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
+  function log(){ if (DEBUG) { var a=["[both-controller v3.5.7]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
 
   if (!REVIEWS_EP && !PURCHASES_EP) {
-    root.innerHTML =
-      '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Missing endpoints.</div>';
+    root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Missing endpoints.</div>';
     return;
   }
 
@@ -33,6 +30,7 @@
   + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
   + ':host{all:initial;}'
   + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}'
+  + '.wrap *{font-family:inherit;}' /* kill mixed-font weirdness */
 
   /* Card */
   + '.card{position:relative;width:340px;max-width:90vw;background:#fff;color:#0b1220;border-radius:18px;box-shadow:0 16px 40px rgba(2,6,23,.18);border:1px solid rgba(2,6,23,.06);overflow:hidden;}'
@@ -57,14 +55,14 @@
   + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-  /* Purchases: 2 columns — text LEFT, media RIGHT */
+  /* Purchases: 2 columns — text LEFT, media RIGHT; RTL */
   + '.row-p{display:grid;grid-template-columns:1fr 108px;gap:14px;align-items:center;padding:16px 14px 6px;direction:rtl;}'
   + '.ptext{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}'
   + '.psentence{direction:rtl;text-align:right;font-size:15px;line-height:1.3;}'
   + '.psentence .buyer{font-weight:700;}'
   + '.psentence .prod{font-weight:700;color:#2578ff;}'
-  + '.pbadge{align-self:flex-end;display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 12px;border-radius:999px;background:#e9f8ec;border:1px solid #bfe8c8;font-size:13px;font-weight:700;color:#198038;}'
-  + '.pbadge .check{width:18px;height:18px;display:inline-block;}'
+  + '.pbadge{align-self:flex-end;display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 10px;border-radius:999px;background:#e9f8ec;border:1px solid #bfe8c8;font-size:12px;font-weight:700;color:#198038;white-space:nowrap;}'
+  + '.pbadge .check{width:16px;height:16px;display:inline-block;}'
 
   + '.pmedia{justify-self:end;display:flex;flex-direction:column;align-items:flex-end;gap:8px;}'
   + '.pimg{width:96px;height:96px;border-radius:14px;object-fit:cover;background:#eef2f7;display:block;border:1px solid rgba(2,6,23,.06);}'
@@ -81,7 +79,7 @@
   + '@media (min-width:720px){ .row-p{grid-template-columns:1fr 112px;} .pimg,.pimg-fallback{width:112px;height:112px;} }'
 
   /* Mobile compact */
-  + '@media (max-width:480px){ .card{width:300px} .row-r{grid-template-columns:34px 1fr 24px;gap:8px;padding:10px 10px 6px} .avatar,.avatar-fallback{width:34px;height:34px} .name{font-size:13px} .body{font-size:13px;line-height:1.3;padding:0 10px 10px} .row-p{grid-template-columns:1fr 92px;gap:10px;padding:12px 10px 4px} .pimg,.pimg-fallback{width:92px;height:92px} .psentence{font-size:14px} .ptime{font-size:11.5px} .pbadge{height:26px;padding:0 10px;font-size:12px} }'
+  + '@media (max-width:480px){ .card{width:300px} .row-r{grid-template-columns:34px 1fr 24px;gap:8px;padding:10px 10px 6px} .avatar,.avatar-fallback{width:34px;height:34px} .name{font-size:13px} .body{font-size:13px;line-height:1.3;padding:0 10px 10px} .row-p{grid-template-columns:1fr 92px;gap:10px;padding:12px 10px 4px} .pimg,.pimg-fallback{width:92px;height:92px} .psentence{font-size:14px} .ptime{font-size:11.5px} .pbadge{height:24px;padding:0 8px;font-size:11.5px} }'
   ;
   root.appendChild(style);
 
@@ -94,75 +92,34 @@
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
   function escapeHTML(s){ return String(s||"").replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]);}); }
   function firstName(s){ s=String(s||"").trim(); var parts=s.split(/\s+/); return parts[0]||s; }
+  function truncateWords(s,n){ s=(s||"").replace(/\s+/g," ").trim(); var p=s?s.split(" "):[]; return p.length>n?p.slice(0,n).join(" ")+"…":s; }
+  function scaleClass(text){ var t=(text||"").trim(), L=t.length; if(L>220) return "tiny"; if(L>140) return "small"; return ""; }
+  function timeAgo(ts){ try{ var d=new Date(ts); var diff=Math.max(0,(Date.now()-d.getTime())/1000); var m=Math.floor(diff/60), h=Math.floor(m/60), d2=Math.floor(h/24); if(d2>0) return d2===1?"אתמול":"לפני "+d2+" ימים"; if(h>0) return "לפני "+h+" שעות"; if(m>0) return "לפני "+m+" דקות"; return "כרגע"; }catch(_){ return ""; } }
 
-  function renderMonogram(name){
-    var d=document.createElement("div");
-    d.className="avatar-fallback";
-    d.textContent=firstLetter(name);
-    d.style.background=colorFromString(name);
-    return d;
-  }
+  // avatar preload (no blank pop)
+  function renderMonogram(name){ var d=document.createElement("div"); d.className="avatar-fallback"; d.textContent=firstLetter(name); d.style.background=colorFromString(name); return d; }
   function renderAvatarPreloaded(name, url){
     var shell = renderMonogram(name);
     if(url){
-      var img = new Image();
-      img.width=40; img.height=40; img.decoding="async"; img.loading="eager";
-      img.onload = function(){
-        var tag=document.createElement("img");
-        tag.className="avatar"; tag.alt="";
-        tag.width=40; tag.height=40; tag.decoding="async"; tag.loading="eager"; tag.src=url;
-        shell.replaceWith(tag);
-      };
-      img.onerror = function(){};
-      img.src = url;
+      var img = new Image(); img.width=40; img.height=40; img.decoding="async"; img.loading="eager";
+      img.onload=function(){ var tag=document.createElement("img"); tag.className="avatar"; tag.alt=""; tag.width=40; tag.height=40; tag.decoding="async"; tag.loading="eager"; tag.src=url; shell.replaceWith(tag); };
+      img.onerror=function(){};
+      img.src=url;
     }
     return shell;
-  }
-  function truncateWords(s,n){ s=(s||"").replace(/\s+/g," ").trim(); var p=s?s.split(" "):[]; return p.length>n?p.slice(0,n).join(" ")+"…":s; }
-  function scaleClass(text){ var t=(text||"").trim(), L=t.length; if(L>220) return "tiny"; if(L>140) return "small"; return ""; }
-  function timeAgo(ts){
-    try{
-      var d=new Date(ts); var diff=Math.max(0,(Date.now()-d.getTime())/1000);
-      var m=Math.floor(diff/60), h=Math.floor(m/60), d2=Math.floor(h/24);
-      if(d2>0) return d2===1?"אתמול":"לפני "+d2+" ימים";
-      if(h>0) return "לפני "+h+" שעות";
-      if(m>0) return "לפני "+m+" דקות";
-      return "כרגע";
-    }catch(_){ return ""; }
   }
 
   // ---- normalizers ----
   function getPhotoUrl(o){
     if(!o||typeof o!=="object") return "";
-    var k=Object.keys(o);
-    for(var i=0;i<k.length;i++){
-      var n=k[i], ln=n.toLowerCase();
-      if(ln==="photo"||ln==="reviewerphotourl"||ln==="profilephotourl"||ln==="profile_photo_url"||
-         ln==="photourl"||ln==="image"||ln==="imageurl"||ln==="avatar"||ln==="avatarurl"){
-        var v = (o[n]==null?"":String(o[n])).trim();
-        if(v) return v;
-      }
-    }
+    var k=Object.keys(o); for(var i=0;i<k.length;i++){ var n=k[i], ln=n.toLowerCase();
+      if(ln==="photo"||ln==="reviewerphotourl"||ln==="profilephotourl"||ln==="profile_photo_url"||ln==="photourl"||ln==="image"||ln==="imageurl"||ln==="avatar"||ln==="avatarurl"){
+        var v = (o[n]==null?"":String(o[n])).trim(); if(v) return v;
+      } }
     return "";
   }
-  function normReview(x){
-    return {
-      kind: "review",
-      authorName: x.authorName||x.userName||x.Header||x.name||x.author||"Anonymous",
-      text:       x.text||x.reviewText||x.Content||x.content||"",
-      rating:     x.rating||x.stars||x.score||5,
-      profilePhotoUrl: x.Photo||x.reviewerPhotoUrl||getPhotoUrl(x)
-    };
-  }
-  function normPurchase(x){
-    return {
-      kind: "purchase",
-      buyer:   x.buyer||x.buyerName||x.customerName||x.name||x.customer||"לקוח/ה",
-      product: x.product||x.productName||x.item||x.title||"מוצר",
-      image:   x.productImage||x.image||"",
-      purchased_at: x.purchased_at || new Date().toISOString()
-    };
-  }
+  function normReview(x){ return { kind:"review", authorName:x.authorName||x.userName||x.Header||x.name||x.author||"Anonymous", text:x.text||x.reviewText||x.Content||x.content||"", rating:x.rating||x.stars||x.score||5, profilePhotoUrl:x.Photo||x.reviewerPhotoUrl||getPhotoUrl(x) }; }
+  function normPurchase(x){ return { kind:"purchase", buyer:x.buyer||x.buyerName||x.customerName||x.name||x.customer||"לקוח/ה", product:x.product||x.productName||x.item||x.title||"מוצר", image:x.productImage||x.image||"", purchased_at:x.purchased_at||new Date().toISOString() }; }
   function normalizeArray(data, as){
     var arr=[]; if(Object.prototype.toString.call(data)==="[object Array]") arr=data;
     else if(data&&typeof data==="object"){
@@ -178,6 +135,34 @@
     return arr;
   }
 
+  // ---- fetch with jsDelivr mirror failover ----
+  var JS_MIRRORS = ["https://cdn.jsdelivr.net","https://fastly.jsdelivr.net","https://gcore.jsdelivr.net"];
+  function rewriteToMirror(u, mirror){
+    try { var a=new URL(u), m=new URL(mirror); a.protocol=m.protocol; a.host=m.host; return a.toString(); } catch(_){ return u; }
+  }
+  function fetchTextWithMirrors(u){
+    var opts = {method:"GET", credentials:"omit", cache:"no-store"};
+    var i = 0, isJSD = /(^https?:)?\/\/([^\/]*jsdelivr\.net)/i.test(u);
+    var urlWithBuster = u + (u.indexOf('?')>-1?'&':'?') + 't=' + Date.now();
+    function attempt(url){
+      return fetch(url, opts).then(function(res){
+        return res.text().then(function(raw){
+          if(!res.ok) throw new Error(raw || ("HTTP "+res.status));
+          return raw;
+        });
+      }).catch(function(err){
+        if(isJSD && i < JS_MIRRORS.length-1){
+          i++; var next = rewriteToMirror(u, JS_MIRRORS[i]);
+          if (DEBUG) console.warn("[both-controller] mirror retry", next);
+          return attempt(next + (next.indexOf('?')>-1?'&':'?') + 't=' + Date.now());
+        }
+        throw err;
+      });
+    }
+    return attempt(urlWithBuster);
+  }
+  function fetchJSON(url){ return fetchTextWithMirrors(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } }); }
+
   // ---- renderers ----
   function renderReviewCard(item){
     var card=document.createElement("div"); card.className="card fade-in";
@@ -187,12 +172,11 @@
 
     var header=document.createElement("div"); header.className="row-r";
     var avatarEl = renderAvatarPreloaded(item.authorName, item.profilePhotoUrl);
-
     var meta=document.createElement("div"); meta.className="meta";
     var name=document.createElement("div"); name.className="name"; name.textContent=item.authorName||"Anonymous";
     meta.appendChild(name);
+    header.appendChild(avatarEl); header.appendChild(meta); header.appendChild(document.createElement("span"));
 
-    header.appendChild(avatarEl); header.appendChild(meta); header.appendChild(document.createElement("span")); // placeholder for layout
     var body=document.createElement("div");
     var shortText=truncateWords(item.text, MAX_WORDS);
     body.className="body "+scaleClass(shortText); body.textContent=shortText;
@@ -216,16 +200,14 @@
   function renderPurchaseCard(p){
     var card=document.createElement("div"); card.className="card fade-in";
 
-    // X (absolute)
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
     x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
     card.appendChild(x);
 
     var row=document.createElement("div"); row.className="row-p";
 
-    // LEFT: text (RTL, right-aligned)
+    // LEFT: text
     var textCol=document.createElement("div"); textCol.className="ptext";
-
     var pill=document.createElement("div"); pill.className="pbadge";
     pill.innerHTML = '<svg class="check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#2ecc71" opacity=".18"/><path d="M10.2 14.6l-2.1-2.1-1.4 1.4 3.5 3.5 6-6-1.4-1.4-4.6 4.6z" fill="#1a9f4b"/></svg><span>מאומת</span><span style="font-weight:700;">EVID</span>';
     textCol.appendChild(pill);
@@ -290,9 +272,7 @@
     else { showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS); }
   }
 
-  function fetchText(url){ return fetch(url,{method:"GET",credentials:"omit",cache:"no-store"}).then(function(res){ return res.text().then(function(raw){ if(!res.ok) throw new Error(raw || ("HTTP "+res.status)); return raw; }); }); }
-  function fetchJSON(url){ return fetchText(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } }); }
-
+  // use mirror-failover fetchers
   function loadAll(){
     var p1 = REVIEWS_EP ? fetchJSON(REVIEWS_EP).then(function(d){ return normalizeArray(d,"review"); }).catch(function(e){ log("reviews fetch err:", e); return []; }) : Promise.resolve([]);
     var p2 = PURCHASES_EP ? fetchJSON(PURCHASES_EP).then(function(d){ return normalizeArray(d,"purchase");}).catch(function(e){ log("purchases fetch err:", e); return []; }) : Promise.resolve([]);
@@ -302,7 +282,7 @@
       start();
     }).catch(function(e){
       root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Widget error: '+ String(e && e.message || e) +'</div>';
-      console.error("[both-controller v3.5.6]", e);
+      console.error("[both-controller v3.5.7]", e);
     });
   }
 
