@@ -108,6 +108,32 @@
     }
     return shell;
   }
+// Avatar: show monogram immediately, swap in image only after it loads
+function renderAvatar(name,url){
+  var shell = (function(){
+    var d=document.createElement("div");
+    d.className="avatar-fallback";
+    d.textContent=(name||"?").trim().charAt(0).toUpperCase()||"?";
+    var s=name||"", h=0; for(var i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0;
+    d.style.background="hsl("+(h%360)+" 70% 45%)";
+    return d;
+  })();
+  if(url){
+    var pre = new Image();
+    pre.width=40; pre.height=40; pre.decoding="async"; pre.loading="eager";
+    pre.onload=function(){
+      var img=document.createElement("img");
+      img.className="avatar"; img.alt=""; img.width=40; img.height=40; img.decoding="async"; img.loading="eager"; img.src=url;
+      shell.replaceWith(img);
+    };
+    pre.onerror=function(){ /* keep monogram */ };
+    pre.src=url;
+  }
+  return shell;
+}
+
+// ✅ Back-compat alias to match renderCard() usage
+function renderAvatarLazy(name, url){ return renderAvatar(name, url); }
 
   // ---- normalizers ----
   function getPhotoUrl(o){
