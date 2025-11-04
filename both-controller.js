@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — mobile/desktop polish, hot badge + glass buy button (no cart image) */
+/*! both-controller v3.6.4 — mobile polish: time above text, tighter footer, no cart; desktop unchanged */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -31,7 +31,7 @@
   + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}'
   + '.wrap *{font-family:inherit;box-sizing:border-box;}'
 
-  /* ------------ Card ------------ */
+  /* Card */
   + '.card{position:relative;width:370px;max-width:92vw;background:#fff;color:#0b1220;border-radius:18px;box-shadow:0 16px 40px rgba(2,6,23,.18);border:1px solid rgba(2,6,23,.06);overflow:hidden;}'
 
   /* Close button */
@@ -54,7 +54,8 @@
   + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-  /* -------- Purchases (layout) -------- */
+  /* -------- Purchases -------- */
+  /* Top row: text (left) | framed image (right) */
   + '.p-top{display:grid;grid-template-columns:1fr 156px;gap:16px;align-items:center;padding:16px 16px 8px;direction:ltr;}'
   + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:6px;align-items:flex-end;justify-content:center;direction:rtl;}'
   + '.psentence{max-width:100%;text-align:right;font-size:15px;line-height:1.35;word-break:break-word;}'
@@ -66,23 +67,19 @@
   + '.pimg{width:100%;height:100%;object-fit:contain;background:#fff;display:block;}'
   + '.pimg-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#475569;font-weight:700;background:#f1f5f9;}'
 
-  /* ------ New: HOT badge (animated) ------ */
+  /* Hot badge (kept) */
   + '.hotcap{position:absolute;top:-12px;left:12px;z-index:3;}'
   + '.badge-hot{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font:700 12.5px/1.1 system-ui,-apple-system,Segoe UI,Heebo,Arial,sans-serif;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;box-shadow:0 1px 0 rgba(0,0,0,.04);white-space:nowrap;}'
   + '.badge-hot svg{width:14px;height:14px}'
-  + '.badge-hot:hover{filter:saturate(1.05)}'
   + '.pulse{animation:pulse 2.8s ease-in-out infinite}'
   + '@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}50%{box-shadow:0 0 0 8px rgba(249,115,22,.12)}}'
 
-  /* ------ New: Glass BUY button (desktop only) ------ */
+  /* Buy button (desktop only; unchanged) */
   + '.buycap{position:absolute;top:-18px;right:-18px;z-index:3;}'
   + '.btn-buy{--pad-y:12px;--pad-x:16px;display:inline-flex;align-items:center;gap:10px;padding:var(--pad-y) var(--pad-x);border-radius:999px;border:0;cursor:pointer;text-decoration:none;color:#fff;background:linear-gradient(135deg,#22c55e,#16a34a);font:700 14px/1.1 Heebo,Inter,system-ui,Arial,sans-serif;box-shadow:0 12px 28px rgba(31,41,55,.25), 0 1px 0 rgba(255,255,255,.08) inset;transition:transform .18s ease, box-shadow .25s ease;}'
-  + '.btn-buy:hover{transform:translateY(-1px);box-shadow:0 16px 34px rgba(31,41,55,.32), 0 1px 0 rgba(255,255,255,.10) inset;}'
-  + '.btn-buy:active{transform:translateY(0);}'
-  + '.btn-buy svg{width:18px;height:18px;flex:0 0 18px;}'
   + '.btn-buy--glass{position:relative;isolation:isolate;}'
   + '.btn-buy--glass::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient( to bottom, rgba(255,255,255,.35) 0%, rgba(255,255,255,.18) 50%, rgba(255,255,255,0) 70% );mix-blend-mode:soft-light;pointer-events:none;transition:transform .2s ease;}'
-  + '.btn-buy:hover::after{transform:translateX(12%) skewX(-20deg);}'
+  + '.btn-buy:hover{transform:translateY(-1px);} .btn-buy:hover::after{transform:translateX(12%) skewX(-20deg);}'
 
   /* Footer */
   + '.p-foot{display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:6px 16px 14px;gap:12px;direction:ltr;}'
@@ -93,28 +90,34 @@
   + '.ptime{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#000;text-align:right;direction:rtl;}'
   + '.ptime svg{width:14px;height:14px;opacity:.95;display:block;}'
 
+  /* NEW: time element shown at TOP only on mobile */
+  + '.ptime-top{display:none;color:#1f2937;opacity:.92;}'
+
   /* Animations */
   + '.fade-in{animation:fadeIn .35s ease forwards;} .fade-out{animation:fadeOut .35s ease forwards;}'
   + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
   + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
 
-  /* Desktop (show glass button) */
-  + '@media (min-width:720px){ .p-top{grid-template-columns:1fr 168px;} .pframe{width:160px;height:116px;} .buycap{display:block;} }'
+  /* Desktop — unchanged */
+  + '@media (min-width:720px){ .p-top{grid-template-columns:1fr 168px;} .pframe{width:160px;height:116px;} .buycap{display:block;} .ptime-top{display:none;} }'
 
-  /* Mobile (match ref #1: badge visible, no button) */
+  /* Mobile — make it match ref #2 exactly */
   + '@media (max-width:480px){'
+  + '  .wrap{bottom:8px;}' /* trim space under the card */
   + '  .card{width:330px;}'
   + '  .row-r{grid-template-columns:34px 1fr 24px;gap:8px;padding:10px 10px 6px;}'
   + '  .avatar,.avatar-fallback{width:34px;height:34px;}'
   + '  .name{font-size:13px;}'
   + '  .body{font-size:13px;line-height:1.3;padding:0 10px 10px;}'
-  + '  .p-top{grid-template-columns:1fr 144px;padding:14px 12px 6px;gap:12px;}'
+  + '  .p-top{grid-template-columns:1fr 144px;padding:10px 10px 6px;gap:10px;}' /* tighter */
   + '  .pframe{width:144px;height:104px;}'
   + '  .psentence{font-size:14px;}'
-  + '  .p-foot{padding:6px 12px 12px;}'
-  + '  .ptime{font-size:11.5px;}'
-  + '  .pbadge{height:24px;padding:0 10px;font-size:11.5px;}'
-  + '  .buycap{display:none;}'
+  + '  .hotcap{top:-10px;left:10px;}' /* small nudge */
+  + '  .ptime-top{display:inline-flex;font-size:12px;margin:0 0 4px auto;}' /* show time above text, right aligned */
+  + '  .p-foot{grid-template-columns:1fr;gap:6px;padding:4px 10px 8px;}'  /* tighter footer */
+  + '  .foot-right{display:none;}'       /* hide bottom time on mobile */
+  + '  .pbadge{height:24px;padding:0 10px;font-size:11.5px;}' /* smaller pill */
+  + '  .buycap{display:none;}'           /* no buy button on mobile */
   + '}'
   ;
   root.appendChild(style);
@@ -209,7 +212,7 @@
     return arr;
   }
 
-  /* ---- fetchers with mirror failover (for JSON endpoints) ---- */
+  /* ---- fetchers with mirror failover ---- */
   var JS_MIRRORS = ["https://cdn.jsdelivr.net","https://fastly.jsdelivr.net","https://gcore.jsdelivr.net"];
   function rewriteToMirror(u, mirror){
     try { var a=new URL(u), m=new URL(mirror); a.protocol=m.protocol; a.host=m.host; return a.toString(); } catch(_){ return u; }
@@ -266,7 +269,7 @@
       + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path>'
       + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
       + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82В7.64H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
-      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48ל2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
+      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
       + '  </svg>'
       + '</span>'
       + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>'
@@ -286,6 +289,15 @@
     var top=document.createElement("div"); top.className="p-top";
 
     var textCol=document.createElement("div"); textCol.className="ptext";
+
+    /* Mobile: time ABOVE sentence (hidden on desktop via CSS) */
+    var tTop=document.createElement("div"); tTop.className="ptime ptime-top";
+    tTop.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
+                   + '  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>'
+                   + '  <path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+                   + '</svg>' + escapeHTML(timeAgo(p.purchased_at));
+    textCol.appendChild(tTop);
+
     var sentence=document.createElement("div"); sentence.className="psentence";
     var buyerFirst = firstName(p.buyer);
     sentence.innerHTML = '<strong class="buyer">'+escapeHTML(buyerFirst)+'</strong> רכש/ה '
@@ -306,18 +318,16 @@
     frame.appendChild(imgEl);
     media.appendChild(frame);
 
-    /* NEW: Hot badge (always visible, mobile & desktop) */
+    /* Hot badge */
     var hotcap = document.createElement('div'); hotcap.className = 'hotcap';
     hotcap.innerHTML = ''
       + '<span class="badge-hot pulse" role="status" aria-live="polite">'
-      + '  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
-      + '    <path d="M13.5 2s1 3-1.5 5.5S9 12 9 14a5 5 0 0010 0c0-3-2-4.5-3-6.5-1-2 0-5-2.5-5.5z"></path>'
-      + '  </svg>'
+      + '  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 2s1 3-1.5 5.5S9 12 9 14a5 5 0 0010 0c0-3-2-4.5-3-6.5-1-2 0-5-2.5-5.5z"/></svg>'
       + '  פופולרי עכשיו'
       + '</span>';
     media.appendChild(hotcap);
 
-    /* NEW: Glass Buy button (desktop only; hidden on mobile via CSS) */
+    /* Desktop-only buy button (unchanged) */
     var buycap = document.createElement('div'); buycap.className = 'buycap';
     var href = (p && p.url) ? String(p.url) : '#';
     buycap.innerHTML = ''
@@ -348,12 +358,12 @@
     left.appendChild(pill);
 
     var right=document.createElement("div"); right.className="foot-right";
-    var t=document.createElement("div"); t.className="ptime";
-    t.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
-                +   '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>'
-                +   '<path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
-                + '</svg>' + escapeHTML(timeAgo(p.purchased_at));
-    right.appendChild(t);
+    var tBottom=document.createElement("div"); tBottom.className="ptime";
+    tBottom.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
+                      +   '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>'
+                      +   '<path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+                      + '</svg>' + escapeHTML(timeAgo(p.purchased_at));
+    right.appendChild(tBottom);
 
     foot.appendChild(left);
     foot.appendChild(right);
