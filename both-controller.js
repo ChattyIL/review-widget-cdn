@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — MOBILE: time up near X, sentence higher, EVID right under sentence, no bottom space (desktop unchanged) */
+/*! both-controller v3.6.4 — MOBILE exact layout: time up near X, sentence higher, EVID right below, no bottom gap (desktop unchanged) */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -89,35 +89,35 @@
   + '.ptime{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#000;text-align:right;direction:rtl;}'
   + '.ptime svg{width:14px;height:14px;opacity:.95;display:block;}'
 
-  /* EXTRA pieces used on mobile */
-  + '.ptime-top{display:none;color:#1f2937;opacity:.92;}'
-  + '.pbadge-mobile{display:none;}' /* shown only on mobile */
+  /* EXTRA elements for mobile */
+  + '.ptime-top{display:none;color:#1f2937;opacity:.92;}'     /* will show on mobile */
+  + '.pbadge-mobile{display:none;}'                           /* will show on mobile */
 
   /* Animations */
   + '.fade-in{animation:fadeIn .35s ease forwards;} .fade-out{animation:fadeOut .35s ease forwards;}'
   + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
   + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
 
-  /* Desktop — keep original layout */
+  /* Desktop — unchanged */
   + '@media (min-width:720px){ .p-top{grid-template-columns:1fr 168px;} .pframe{width:160px;height:116px;} .buycap{display:block;} .ptime-top{display:none;} .pbadge-mobile{display:none;} }'
 
-  /* MOBILE — match ref #2 exactly */
+  /* MOBILE — exact as ref #2 */
   + '@media (max-width:480px){'
-  + '  .wrap{bottom:8px;}'                                  /* less bottom space */
+  + '  .wrap{bottom:8px;}'
   + '  .card{width:330px;}'
   + '  .row-r{grid-template-columns:34px 1fr 24px;gap:8px;padding:10px 10px 6px;}'
   + '  .avatar,.avatar-fallback{width:34px;height:34px;}'
   + '  .name{font-size:13px;}'
   + '  .body{font-size:13px;line-height:1.3;padding:0 10px 10px;}'
-  + '  .p-top{grid-template-columns:1fr 144px;padding:8px 10px 0;gap:10px;}' /* push content up, remove bottom pad */
+  + '  .p-top{grid-template-columns:1fr 144px;padding:6px 10px 0;gap:10px;}' /* tighter & higher */
   + '  .pframe{width:144px;height:104px;}'
   + '  .hotcap{top:-10px;left:10px;}'
-  + '  .ptext{align-items:stretch;gap:4px;}'                /* allow different align per child */
-  + '  .ptime-top{display:flex;font-size:12px;align-self:flex-start;margin:2px 0 0 0;}' /* near X (left) */
-  + '  .psentence{font-size:14px;align-self:flex-end;}'     /* right-aligned RTL */
-  + '  .pbadge-mobile{display:inline-flex;align-self:flex-end;margin:6px 0 6px;}' /* right under sentence, right aligned */
-  + '  .p-foot{display:none;}'                              /* remove bottom white area entirely */
-  + '  .buycap{display:none;}'                              /* no button on mobile */
+  + '  .ptext{align-items:flex-end;gap:2px;}'                                 /* smaller gap */
+  + '  .ptime-top{display:flex;font-size:12px;align-self:flex-end;margin:-6px 0 0;}' /* raise near X height */
+  + '  .psentence{font-size:14px;margin:0;}'                                   /* push up */
+  + '  .pbadge-mobile{display:inline-flex;align-self:flex-end;margin:4px 0 2px;}' /* right under sentence */
+  + '  .p-foot{display:none;}'                                                 /* remove bottom white area */
+  + '  .buycap{display:none;}'                                                 /* no button on mobile */
   + '}'
   ;
   root.appendChild(style);
@@ -265,7 +265,7 @@
       + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path>'
       + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
       + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82В7.64H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
-      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
+      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48ל2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
       + '  </svg>'
       + '</span>'
       + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>'
@@ -286,7 +286,7 @@
 
     var textCol=document.createElement("div"); textCol.className="ptext";
 
-    // TIME — appears at top (mobile via CSS)
+    // TIME — mobile shows it at the very top (raised with negative margin)
     var tTop=document.createElement("div"); tTop.className="ptime ptime-top";
     tTop.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
                    + '  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>'
@@ -294,7 +294,7 @@
                    + '</svg>' + escapeHTML(timeAgo(p.purchased_at));
     textCol.appendChild(tTop);
 
-    // MAIN SENTENCE — right aligned (RTL)
+    // MAIN SENTENCE
     var sentence=document.createElement("div"); sentence.className="psentence";
     var buyerFirst = firstName(p.buyer);
     sentence.innerHTML = '<strong class="buyer">'+escapeHTML(buyerFirst)+'</strong> רכש/ה '
@@ -331,7 +331,7 @@
     buycap.innerHTML = ''
       + '<a class="btn-buy btn-buy--glass" href="'+ href +'" target="_blank" rel="nofollow noopener" aria-label="לרכישה">'
       + '  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">'
-      + '    <path d="M3 5h3l2 10h9l2-7H7" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>'
+      + '    <path d="M3 5h3l2 10h9ל2-7H7" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>'
       + '    <circle cx="10" cy="19" r="1.5" fill="#fff"></circle>'
       + '    <circle cx="17" cy="19" r="1.5" fill="#fff"></circle>'
       + '  </svg>'
