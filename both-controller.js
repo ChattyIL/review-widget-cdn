@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — MOBILE tweak: center EVID pill under content, hide footer, time above text (desktop unchanged) */
+/*! both-controller v3.6.4 — MOBILE: time up near X, sentence higher, EVID right under sentence, no bottom space (desktop unchanged) */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -55,8 +55,7 @@
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
   /* -------- Purchases -------- */
-  /* Top row: text (left) | framed image (right) */
-  + '.p-top{display:grid;grid-template-columns:1fr 156px;gap:16px;align-items:center;padding:16px 16px 8px;direction:ltr;}'
+  + '.p-top{display:grid;grid-template-columns:1fr 156px;gap:16px;align-items:center;padding:16px 16px 8px;direction:ltr;}' /* desktop base */
   + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:6px;align-items:flex-end;justify-content:center;direction:rtl;}'
   + '.psentence{max-width:100%;text-align:right;font-size:15px;line-height:1.35;word-break:break-word;}'
   + '.psentence .buyer{font-weight:700;}'
@@ -74,14 +73,14 @@
   + '.pulse{animation:pulse 2.8s ease-in-out infinite}'
   + '@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}50%{box-shadow:0 0 0 8px rgba(249,115,22,.12)}}'
 
-  /* Buy button (desktop only) */
+  /* Desktop buy button (hidden on mobile) */
   + '.buycap{position:absolute;top:-18px;right:-18px;z-index:3;}'
   + '.btn-buy{--pad-y:12px;--pad-x:16px;display:inline-flex;align-items:center;gap:10px;padding:var(--pad-y) var(--pad-x);border-radius:999px;border:0;cursor:pointer;text-decoration:none;color:#fff;background:linear-gradient(135deg,#22c55e,#16a34a);font:700 14px/1.1 Heebo,Inter,system-ui,Arial,sans-serif;box-shadow:0 12px 28px rgba(31,41,55,.25), 0 1px 0 rgba(255,255,255,.08) inset;transition:transform .18s ease, box-shadow .25s ease;}'
   + '.btn-buy--glass{position:relative;isolation:isolate;}'
   + '.btn-buy--glass::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient( to bottom, rgba(255,255,255,.35) 0%, rgba(255,255,255,.18) 50%, rgba(255,255,255,0) 70% );mix-blend-mode:soft-light;pointer-events:none;transition:transform .2s ease;}'
   + '.btn-buy:hover{transform:translateY(-1px);} .btn-buy:hover::after{transform:translateX(12%) skewX(-20deg);}'
 
-  /* Footer (desktop shows it; mobile will hide it) */
+  /* Footer (desktop base) */
   + '.p-foot{display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:6px 16px 14px;gap:12px;direction:ltr;}'
   + '.foot-left{justify-self:start;}'
   + '.foot-right{justify-self:end;}'
@@ -90,34 +89,35 @@
   + '.ptime{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#000;text-align:right;direction:rtl;}'
   + '.ptime svg{width:14px;height:14px;opacity:.95;display:block;}'
 
-  /* NEW: top time element (hidden on desktop), and mobile-centered pill */
+  /* EXTRA pieces used on mobile */
   + '.ptime-top{display:none;color:#1f2937;opacity:.92;}'
-  + '.pbadge-mobile{display:none;}' /* default hidden; mobile shows & centers */
+  + '.pbadge-mobile{display:none;}' /* shown only on mobile */
 
   /* Animations */
   + '.fade-in{animation:fadeIn .35s ease forwards;} .fade-out{animation:fadeOut .35s ease forwards;}'
   + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
   + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
 
-  /* Desktop — unchanged */
+  /* Desktop — keep original layout */
   + '@media (min-width:720px){ .p-top{grid-template-columns:1fr 168px;} .pframe{width:160px;height:116px;} .buycap{display:block;} .ptime-top{display:none;} .pbadge-mobile{display:none;} }'
 
-  /* MOBILE — match ref #2: center EVID under content, remove bottom white area */
+  /* MOBILE — match ref #2 exactly */
   + '@media (max-width:480px){'
-  + '  .wrap{bottom:8px;}'
+  + '  .wrap{bottom:8px;}'                                  /* less bottom space */
   + '  .card{width:330px;}'
   + '  .row-r{grid-template-columns:34px 1fr 24px;gap:8px;padding:10px 10px 6px;}'
   + '  .avatar,.avatar-fallback{width:34px;height:34px;}'
   + '  .name{font-size:13px;}'
   + '  .body{font-size:13px;line-height:1.3;padding:0 10px 10px;}'
-  + '  .p-top{grid-template-columns:1fr 144px;padding:10px 10px 2px;gap:10px;}' /* tighter bottom padding */
+  + '  .p-top{grid-template-columns:1fr 144px;padding:8px 10px 0;gap:10px;}' /* push content up, remove bottom pad */
   + '  .pframe{width:144px;height:104px;}'
-  + '  .psentence{font-size:14px;}'
   + '  .hotcap{top:-10px;left:10px;}'
-  + '  .ptime-top{display:inline-flex;font-size:12px;margin:0 0 4px auto;}' /* time above text (right) */ 
-  + '  .pbadge-mobile{display:inline-flex;grid-column:1 / -1;justify-self:center;margin:6px auto 4px;}' /* centered pill */
-  + '  .p-foot{display:none;}' /* remove footer = cut bottom white area */
-  + '  .buycap{display:none;}' /* no button on mobile */ 
+  + '  .ptext{align-items:stretch;gap:4px;}'                /* allow different align per child */
+  + '  .ptime-top{display:flex;font-size:12px;align-self:flex-start;margin:2px 0 0 0;}' /* near X (left) */
+  + '  .psentence{font-size:14px;align-self:flex-end;}'     /* right-aligned RTL */
+  + '  .pbadge-mobile{display:inline-flex;align-self:flex-end;margin:6px 0 6px;}' /* right under sentence, right aligned */
+  + '  .p-foot{display:none;}'                              /* remove bottom white area entirely */
+  + '  .buycap{display:none;}'                              /* no button on mobile */
   + '}'
   ;
   root.appendChild(style);
@@ -212,9 +212,11 @@
     return arr;
   }
 
-  /* ---- fetchers ---- */
+  /* ---- fetchers with mirror failover ---- */
   var JS_MIRRORS = ["https://cdn.jsdelivr.net","https://fastly.jsdelivr.net","https://gcore.jsdelivr.net"];
-  function rewriteToMirror(u, mirror){ try { var a=new URL(u), m=new URL(mirror); a.protocol=m.protocol; a.host=m.host; return a.toString(); } catch(_){ return u; } }
+  function rewriteToMirror(u, mirror){
+    try { var a=new URL(u), m=new URL(mirror); a.protocol=m.protocol; a.host=m.host; return a.toString(); } catch(_){ return u; }
+  }
   function fetchTextWithMirrors(u){
     var opts = {method:"GET", credentials:"omit", cache:"no-store"};
     var i = 0, isJSD = /(^https?:)?\/\/([^\/]*jsdelivr\.net)/i.test(u);
@@ -263,7 +265,7 @@
       + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path>'
       + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
       + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82В7.64H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
-      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48ל2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
+      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
       + '  </svg>'
       + '</span>'
       + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>'
@@ -284,7 +286,7 @@
 
     var textCol=document.createElement("div"); textCol.className="ptext";
 
-    /* time ABOVE the sentence (mobile shows via CSS) */
+    // TIME — appears at top (mobile via CSS)
     var tTop=document.createElement("div"); tTop.className="ptime ptime-top";
     tTop.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
                    + '  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>'
@@ -292,12 +294,14 @@
                    + '</svg>' + escapeHTML(timeAgo(p.purchased_at));
     textCol.appendChild(tTop);
 
+    // MAIN SENTENCE — right aligned (RTL)
     var sentence=document.createElement("div"); sentence.className="psentence";
     var buyerFirst = firstName(p.buyer);
     sentence.innerHTML = '<strong class="buyer">'+escapeHTML(buyerFirst)+'</strong> רכש/ה '
                        + '<span class="prod">'+escapeHTML(p.product)+'</span>';
     textCol.appendChild(sentence);
 
+    // IMAGE
     var media=document.createElement("div"); media.className="pmedia";
     var frame=document.createElement("div"); frame.className="pframe";
     var imgEl;
@@ -312,7 +316,7 @@
     frame.appendChild(imgEl);
     media.appendChild(frame);
 
-    /* Hot badge */
+    // HOT badge
     var hotcap = document.createElement('div'); hotcap.className = 'hotcap';
     hotcap.innerHTML = ''
       + '<span class="badge-hot pulse" role="status" aria-live="polite">'
@@ -321,7 +325,7 @@
       + '</span>';
     media.appendChild(hotcap);
 
-    /* Desktop-only buy button (unchanged) */
+    // DESKTOP-ONLY BUY BUTTON
     var buycap = document.createElement('div'); buycap.className = 'buycap';
     var href = (p && p.url) ? String(p.url) : '#';
     buycap.innerHTML = ''
@@ -335,7 +339,7 @@
       + '</a>';
     media.appendChild(buycap);
 
-    /* Mobile-centered EVID pill (shown only on mobile via CSS) */
+    // MOBILE EVID — right under the sentence (right aligned)
     var pillMobile = document.createElement('div');
     pillMobile.className = 'pbadge pbadge-mobile';
     pillMobile.innerHTML = '<svg class="check" viewBox="0 0 24 24" aria-hidden="true">'
@@ -343,9 +347,10 @@
                          +   '<path d="M10.2 14.6l-2.1-2.1-1.4 1.4 3.5 3.5 6-6-1.4-1.4-4.6 4.6z" fill="#1a9f4b"/>'
                          + '</svg>'
                          + '<span class="evid">EVID</span><span class="verified">מאומת</span>';
+
     top.appendChild(textCol);
     top.appendChild(media);
-    top.appendChild(pillMobile);        // spans both columns on mobile
+    top.appendChild(pillMobile);  // appears only on mobile via CSS
     card.appendChild(top);
 
     /* ---------- FOOTER (desktop only) ---------- */
