@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — MOBILE exact layout: time up near X, sentence higher, EVID right below, no bottom gap (desktop unchanged) */
+/*! both-controller v3.6.4 — MOBILE: time centered on top, sentence up, EVID in compact bottom-left footer (desktop unchanged) */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -54,8 +54,8 @@
   + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-  /* -------- Purchases -------- */
-  + '.p-top{display:grid;grid-template-columns:1fr 156px;gap:16px;align-items:center;padding:16px 16px 8px;direction:ltr;}' /* desktop base */
+  /* -------- Purchases (base) -------- */
+  + '.p-top{display:grid;grid-template-columns:1fr 156px;gap:16px;align-items:center;padding:16px 16px 8px;direction:ltr;}'
   + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:6px;align-items:flex-end;justify-content:center;direction:rtl;}'
   + '.psentence{max-width:100%;text-align:right;font-size:15px;line-height:1.35;word-break:break-word;}'
   + '.psentence .buyer{font-weight:700;}'
@@ -66,19 +66,12 @@
   + '.pimg{width:100%;height:100%;object-fit:contain;background:#fff;display:block;}'
   + '.pimg-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#475569;font-weight:700;background:#f1f5f9;}'
 
-  /* Hot badge */
+  /* Hot badge on image */
   + '.hotcap{position:absolute;top:-12px;left:12px;z-index:3;}'
   + '.badge-hot{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font:700 12.5px/1.1 system-ui,-apple-system,Segoe UI,Heebo,Arial,sans-serif;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;box-shadow:0 1px 0 rgba(0,0,0,.04);white-space:nowrap;}'
   + '.badge-hot svg{width:14px;height:14px}'
   + '.pulse{animation:pulse 2.8s ease-in-out infinite}'
   + '@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}50%{box-shadow:0 0 0 8px rgba(249,115,22,.12)}}'
-
-  /* Desktop buy button (hidden on mobile) */
-  + '.buycap{position:absolute;top:-18px;right:-18px;z-index:3;}'
-  + '.btn-buy{--pad-y:12px;--pad-x:16px;display:inline-flex;align-items:center;gap:10px;padding:var(--pad-y) var(--pad-x);border-radius:999px;border:0;cursor:pointer;text-decoration:none;color:#fff;background:linear-gradient(135deg,#22c55e,#16a34a);font:700 14px/1.1 Heebo,Inter,system-ui,Arial,sans-serif;box-shadow:0 12px 28px rgba(31,41,55,.25), 0 1px 0 rgba(255,255,255,.08) inset;transition:transform .18s ease, box-shadow .25s ease;}'
-  + '.btn-buy--glass{position:relative;isolation:isolate;}'
-  + '.btn-buy--glass::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient( to bottom, rgba(255,255,255,.35) 0%, rgba(255,255,255,.18) 50%, rgba(255,255,255,0) 70% );mix-blend-mode:soft-light;pointer-events:none;transition:transform .2s ease;}'
-  + '.btn-buy:hover{transform:translateY(-1px);} .btn-buy:hover::after{transform:translateX(12%) skewX(-20deg);}'
 
   /* Footer (desktop base) */
   + '.p-foot{display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:6px 16px 14px;gap:12px;direction:ltr;}'
@@ -89,9 +82,9 @@
   + '.ptime{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#000;text-align:right;direction:rtl;}'
   + '.ptime svg{width:14px;height:14px;opacity:.95;display:block;}'
 
-  /* EXTRA elements for mobile */
-  + '.ptime-top{display:none;color:#1f2937;opacity:.92;}'     /* will show on mobile */
-  + '.pbadge-mobile{display:none;}'                           /* will show on mobile */
+  /* Elements we show differently on mobile */
+  + '.ptime-top{display:none;color:#1f2937;opacity:.92;}'
+  + '.pbadge-mobile{display:none;}'
 
   /* Animations */
   + '.fade-in{animation:fadeIn .35s ease forwards;} .fade-out{animation:fadeOut .35s ease forwards;}'
@@ -99,9 +92,9 @@
   + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
 
   /* Desktop — unchanged */
-  + '@media (min-width:720px){ .p-top{grid-template-columns:1fr 168px;} .pframe{width:160px;height:116px;} .buycap{display:block;} .ptime-top{display:none;} .pbadge-mobile{display:none;} }'
+  + '@media (min-width:720px){ .p-top{grid-template-columns:1fr 168px;} .pframe{width:160px;height:116px;} .ptime-top{display:none;} .pbadge-mobile{display:none;} }'
 
-  /* MOBILE — exact as ref #2 */
+  /* ===== MOBILE — match ref #2 exactly ===== */
   + '@media (max-width:480px){'
   + '  .wrap{bottom:8px;}'
   + '  .card{width:330px;}'
@@ -109,15 +102,22 @@
   + '  .avatar,.avatar-fallback{width:34px;height:34px;}'
   + '  .name{font-size:13px;}'
   + '  .body{font-size:13px;line-height:1.3;padding:0 10px 10px;}'
-  + '  .p-top{grid-template-columns:1fr 144px;padding:6px 10px 0;gap:10px;}' /* tighter & higher */
+
+  /* TOP: tighter padding; time centered at top, sentence right under it */
+  + '  .p-top{grid-template-columns:1fr 144px;padding:6px 10px 0;gap:10px;}'
   + '  .pframe{width:144px;height:104px;}'
   + '  .hotcap{top:-10px;left:10px;}'
-  + '  .ptext{align-items:flex-end;gap:2px;}'                                 /* smaller gap */
-  + '  .ptime-top{display:flex;font-size:12px;align-self:flex-end;margin:-6px 0 0;}' /* raise near X height */
-  + '  .psentence{font-size:14px;margin:0;}'                                   /* push up */
-  + '  .pbadge-mobile{display:inline-flex;align-self:flex-end;margin:4px 0 2px;}' /* right under sentence */
-  + '  .p-foot{display:none;}'                                                 /* remove bottom white area */
-  + '  .buycap{display:none;}'                                                 /* no button on mobile */
+  + '  .ptext{align-items:stretch;gap:2px;}' /* allow centering for time, RTL for sentence */
+  + '  .ptime-top{display:flex;justify-content:center;font-size:12.5px;margin:-6px 0 0;}' /* visually at X height */
+  + '  .psentence{font-size:15px;margin:2px 0 0;}' /* pushed up under time */
+
+  /* FOOTER: compact bar with ONLY the EVID pill (left). No time on right. */
+  + '  .p-foot{display:grid;grid-template-columns:1fr auto;align-items:center;padding:6px 12px 10px;gap:0;}'
+  + '  .foot-right{display:none;}'
+  + '  .pbadge{height:26px;padding:0 10px;font-size:11.5px;}'
+
+  /* no extra duplicates on mobile */
+  + '  .pbadge-mobile{display:none;}'
   + '}'
   ;
   root.appendChild(style);
@@ -286,7 +286,7 @@
 
     var textCol=document.createElement("div"); textCol.className="ptext";
 
-    // TIME — mobile shows it at the very top (raised with negative margin)
+    // TIME — centered at the very top (mobile shows this)
     var tTop=document.createElement("div"); tTop.className="ptime ptime-top";
     tTop.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
                    + '  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>'
@@ -325,35 +325,11 @@
       + '</span>';
     media.appendChild(hotcap);
 
-    // DESKTOP-ONLY BUY BUTTON
-    var buycap = document.createElement('div'); buycap.className = 'buycap';
-    var href = (p && p.url) ? String(p.url) : '#';
-    buycap.innerHTML = ''
-      + '<a class="btn-buy btn-buy--glass" href="'+ href +'" target="_blank" rel="nofollow noopener" aria-label="לרכישה">'
-      + '  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">'
-      + '    <path d="M3 5h3l2 10h9ל2-7H7" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>'
-      + '    <circle cx="10" cy="19" r="1.5" fill="#fff"></circle>'
-      + '    <circle cx="17" cy="19" r="1.5" fill="#fff"></circle>'
-      + '  </svg>'
-      + '  לרכישה'
-      + '</a>';
-    media.appendChild(buycap);
-
-    // MOBILE EVID — right under the sentence (right aligned)
-    var pillMobile = document.createElement('div');
-    pillMobile.className = 'pbadge pbadge-mobile';
-    pillMobile.innerHTML = '<svg class="check" viewBox="0 0 24 24" aria-hidden="true">'
-                         +   '<circle cx="12" cy="12" r="11" fill="#2ecc71" opacity=".18"/>' 
-                         +   '<path d="M10.2 14.6l-2.1-2.1-1.4 1.4 3.5 3.5 6-6-1.4-1.4-4.6 4.6z" fill="#1a9f4b"/>'
-                         + '</svg>'
-                         + '<span class="evid">EVID</span><span class="verified">מאומת</span>';
-
     top.appendChild(textCol);
     top.appendChild(media);
-    top.appendChild(pillMobile);  // appears only on mobile via CSS
     card.appendChild(top);
 
-    /* ---------- FOOTER (desktop only) ---------- */
+    /* ---------- FOOTER ---------- */
     var foot=document.createElement("div"); foot.className="p-foot";
 
     var left=document.createElement("div"); left.className="foot-left";
@@ -369,7 +345,7 @@
     var tBottom=document.createElement("div"); tBottom.className="ptime";
     tBottom.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
                       +   '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>'
-                      +   '<path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+                      +   '<path d="M12 7v5ל3 2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
                       + '</svg>' + escapeHTML(timeAgo(p.purchased_at));
     right.appendChild(tBottom);
 
