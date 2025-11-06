@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — MOBILE: add 5px top/bottom, show time above sentence; footer hidden. Desktop unchanged. */
+/*! both-controller v3.6.4 — MOBILE: time centered above text, EVID pill under text; Desktop unchanged */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -54,10 +54,10 @@
   + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-  /* -------- Purchases (compact baseline) -------- */
+  /* -------- Purchases (base) -------- */
   + '.p-top{display:grid;grid-template-columns:1fr 168px;gap:12px;align-items:center;padding:8px 12px 2px;direction:ltr;}'
   + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:4px;align-items:stretch;direction:rtl;}'
-  + '.ptime-top{display:flex;justify-content:flex-end;align-items:center;gap:6px;font-size:12.5px;color:#1f2937;opacity:.92;text-align:right;direction:rtl;margin:0;}'
+  + '.ptime-top{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#1f2937;opacity:.92;text-align:right;direction:rtl;margin:0;}'
   + '.ptime-top svg{width:14px;height:14px;opacity:.95;display:block;}'
   + '.psentence{max-width:100%;text-align:right;font-size:15px;line-height:1.35;margin:0;word-break:break-word;}'
   + '.psentence .buyer{font-weight:700;}'
@@ -75,20 +75,24 @@
   + '.pulse{animation:pulse 2.8s ease-in-out infinite}'
   + '@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}50%{box-shadow:0 0 0 8px rgba(249,115,22,.12)}}'
 
-  /* Footer (desktop visible, mobile hidden) */
+  /* Footer (EVID pill container) */
   + '.p-foot{display:grid;grid-template-columns:1fr auto;align-items:center;padding:6px 12px 8px;gap:0;direction:ltr;}'
   + '.foot-left{justify-self:start;}'
   + '.pbadge{display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 10px;border-radius:999px;background:#e9f8ec;border:1px solid #bfe8c8;font-size:11.5px;font-weight:700;color:#198038;white-space:nowrap;direction:ltr;}'
   + '.pbadge .check{width:16px;height:16px;display:inline-block;}'
   + '.foot-right{display:none;}'
 
-  /* Mobile-only tweaks: +5px top & bottom, hide footer, time above sentence */
+  /* ===== MOBILE tweaks to match your mock EXACTLY ===== */
   + '@media (max-width:480px){'
   + '  .card{width:330px;}'
-  + '  .p-top{grid-template-columns:1fr 144px;padding:13px 10px 5px;gap:10px;}/* +5 top, +5 bottom */'
+  + '  .p-top{grid-template-columns:1fr 144px;padding:13px 10px 5px;gap:10px;}/* extra ~5px top & bottom */'
   + '  .pframe{width:144px;height:104px;}'
   + '  .hotcap{top:-10px;}'
-  + '  .p-foot{display:none;}/* remove bottom white space */'
+  + '  /* time above sentence and visually centered within the left column */'
+  + '  .ptime-top{justify-content:center;margin-bottom:2px;}'
+  + '  /* show the EVID pill under sentence (left column feel) with compact spacing */'
+  + '  .p-foot{display:block;padding:6px 10px 6px;}'
+  + '  .foot-left{display:flex;justify-content:flex-start;}'
   + '}'
 
   /* Desktop (unchanged layout) */
@@ -262,7 +266,7 @@
 
     var textCol=document.createElement("div"); textCol.className="ptext";
 
-    // TIME — always above the sentence (mobile+desktop)
+    // TIME (top of left column)
     var tTop=document.createElement("div"); tTop.className="ptime-top";
     tTop.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
                    + '  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>'
@@ -305,7 +309,7 @@
     top.appendChild(media);
     card.appendChild(top);
 
-    /* ---------- FOOTER (desktop only; hidden on mobile via CSS) ---------- */
+    /* ---------- FOOTER (EVID pill) ---------- */
     var foot=document.createElement("div"); foot.className="p-foot";
     var left=document.createElement("div"); left.className="foot-left";
     var pill=document.createElement("div"); pill.className="pbadge";
