@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — MOBILE: time above text, NO EVID pill (compact); Desktop unchanged */
+/*! both-controller v3.6.4 — Purchase layout unified (mobile = desktop), compact, NO EVID pill */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -54,10 +54,10 @@
   + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-  /* -------- Purchases (base) -------- */
-  + '.p-top{display:grid;grid-template-columns:1fr 168px;gap:12px;align-items:center;padding:8px 12px 2px;direction:ltr;}'
+  /* -------- Purchases (unified layout) -------- */
+  + '.p-top{display:grid;grid-template-columns:1fr 168px;gap:12px;align-items:center;padding:13px 12px 6px;direction:ltr;}'
   + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:4px;align-items:stretch;direction:rtl;}'
-  + '.ptime-top{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#1f2937;opacity:.92;text-align:right;direction:rtl;margin:0;}'
+  + '.ptime-top{display:flex;align-items:center;gap:6px;justify-content:center;font-size:12.5px;color:#1f2937;opacity:.92;text-align:right;direction:rtl;margin:0;}'
   + '.ptime-top svg{width:14px;height:14px;opacity:.95;display:block;}'
   + '.psentence{max-width:100%;text-align:right;font-size:15px;line-height:1.35;margin:0;word-break:break-word;}'
   + '.psentence .buyer{font-weight:700;}'
@@ -75,26 +75,19 @@
   + '.pulse{animation:pulse 2.8s ease-in-out infinite}'
   + '@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}50%{box-shadow:0 0 0 8px rgba(249,115,22,.12)}}'
 
-  /* Footer (EVID pill for desktop) */
-  + '.p-foot{display:grid;grid-template-columns:1fr auto;align-items:center;padding:6px 12px 8px;gap:0;direction:ltr;}'
-  + '.foot-left{justify-self:start;}'
-  + '.pbadge{display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 10px;border-radius:999px;background:#e9f8ec;border:1px solid #bfe8c8;font-size:11.5px;font-weight:700;color:#198038;white-space:nowrap;direction:ltr;}'
-  + '.pbadge .check{width:16px;height:16px;display:inline-block;}'
-  + '.foot-right{display:none;}'
+  /* No footer/EVID anywhere (mobile & desktop) */
+  + '.p-foot{display:none !important;}'
 
-  /* ===== MOBILE (no EVID pill; compact height) ===== */
+  /* Mobile image size tweak */
   + '@media (max-width:480px){'
   + '  .card{width:330px;}'
-  + '  .p-top{grid-template-columns:1fr 144px;padding:13px 10px 5px;gap:10px;}/* balanced + compact */'
+  + '  .p-top{grid-template-columns:1fr 144px;padding:13px 10px 6px;gap:10px;}'
   + '  .pframe{width:144px;height:104px;}'
   + '  .hotcap{top:-10px;}'
-  + '  .ptime-top{justify-content:center;margin-bottom:2px;}'
-  + '  .p-foot{display:none !important;}/* hide מאומת/EVID on mobile to keep height small */'
   + '}'
 
-  /* Desktop (unchanged layout) */
+  /* Desktop keeps same unified structure; only image size a bit larger */
   + '@media (min-width:720px){'
-  + '  .p-top{grid-template-columns:1fr 168px;}'
   + '  .pframe{width:160px;height:116px;}'
   + '}'
   ;
@@ -258,12 +251,12 @@
     x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
     card.appendChild(x);
 
-    /* ---------- TOP ROW ---------- */
+    /* ---------- TOP ---------- */
     var top=document.createElement("div"); top.className="p-top";
 
     var textCol=document.createElement("div"); textCol.className="ptext";
 
-    // TIME (top of left column)
+    // time chip (top-left column, centered)
     var tTop=document.createElement("div"); tTop.className="ptime-top";
     tTop.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
                    + '  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>'
@@ -271,14 +264,14 @@
                    + '</svg>' + escapeHTML(timeAgo(p.purchased_at));
     textCol.appendChild(tTop);
 
-    // MAIN SENTENCE
+    // sentence
     var sentence=document.createElement("div"); sentence.className="psentence";
     var buyerFirst = firstName(p.buyer);
     sentence.innerHTML = '<strong class="buyer">'+escapeHTML(buyerFirst)+'</strong> רכש/ה '
                        + '<span class="prod">'+escapeHTML(p.product)+'</span>';
     textCol.appendChild(sentence);
 
-    // IMAGE
+    // media (image + hot badge)
     var media=document.createElement("div"); media.className="pmedia";
     var frame=document.createElement("div"); frame.className="pframe";
     var imgEl;
@@ -293,7 +286,6 @@
     frame.appendChild(imgEl);
     media.appendChild(frame);
 
-    // HOT badge — centered over image
     var hotcap = document.createElement('div'); hotcap.className = 'hotcap';
     hotcap.innerHTML = ''
       + '<span class="badge-hot pulse" role="status" aria-live="polite">'
@@ -306,18 +298,7 @@
     top.appendChild(media);
     card.appendChild(top);
 
-    /* ---------- FOOTER (desktop only) ---------- */
-    var foot=document.createElement("div"); foot.className="p-foot";
-    var left=document.createElement("div"); left.className="foot-left";
-    var pill=document.createElement("div"); pill.className="pbadge";
-    pill.innerHTML = '<svg class="check" viewBox="0 0 24 24" aria-hidden="true">'
-                   +   '<circle cx="12" cy="12" r="11" fill="#2ecc71" opacity=".18"/>' 
-                   +   '<path d="M10.2 14.6l-2.1-2.1-1.4 1.4 3.5 3.5 6-6-1.4-1.4-4.6 4.6z" fill="#1a9f4b"/>'
-                   + '</svg>'
-                   + '<span class="evid">EVID</span><span class="verified">מאומת</span>';
-    left.appendChild(pill);
-    foot.appendChild(left);
-    card.appendChild(foot);
+    // no footer/EVID anywhere
 
     return card;
   }
@@ -353,6 +334,28 @@
   }
 
   /* ---- data loading ---- */
+  function fetchTextWithMirrors(u){
+    var opts = {method:"GET", credentials:"omit", cache:"no-store"};
+    var i = 0, isJSD = /(^https?:)?\/\/([^\/]*jsdelivr\.net)/i.test(u);
+    var urlWithBuster = u + (u.indexOf('?')>-1?'&':'?') + 't=' + Date.now();
+    function attempt(url){
+      return fetch(url, opts).then(function(res){
+        return res.text().then(function(raw){
+          if(!res.ok) throw new Error(raw || ("HTTP "+res.status));
+          return raw;
+        });
+      }).catch(function(err){
+        if(isJSD && i < JS_MIRRORS.length-1){
+          i++; var next = ["https://cdn.jsdelivr.net","https://fastly.jsdelivr.net","https://gcore.jsdelivr.net"][i];
+          try{ var a=new URL(u), m=new URL(next); a.protocol=m.protocol; a.host=m.host; var mirrored=a.toString(); return attempt(mirrored + (mirrored.indexOf("?")>-1?"&":"?") + "t="+Date.now()); }catch(_){ throw err; }
+        }
+        throw err;
+      });
+    }
+    return attempt(urlWithBuster);
+  }
+  function fetchJSON(url){ return fetchTextWithMirrors(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } }); }
+
   function loadAll(){
     var p1 = REVIEWS_EP ? fetchJSON(REVIEWS_EP).then(function(d){ var a=normalizeArray(d,"review"); log("reviews:", a.length); return a; }).catch(function(e){ console.warn("reviews fetch err:", e); return []; }) : Promise.resolve([]);
     var p2 = PURCHASES_EP ? fetchJSON(PURCHASES_EP).then(function(d){ var a=normalizeArray(d,"purchase"); log("purchases:", a.length); return a; }).catch(function(e){ console.warn("purchases fetch err:", e); return []; }) : Promise.resolve([]);
