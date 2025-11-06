@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — MOBILE: time centered on top, sentence up, EVID in compact bottom-left footer (desktop unchanged) */
+/*! both-controller v3.6.4 — purchase: time top-center, compact height, EVID up-left, hot badge centered (mobile + desktop) */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -54,70 +54,52 @@
   + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-  /* -------- Purchases (base) -------- */
-  + '.p-top{display:grid;grid-template-columns:1fr 156px;gap:16px;align-items:center;padding:16px 16px 8px;direction:ltr;}'
-  + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:6px;align-items:flex-end;justify-content:center;direction:rtl;}'
-  + '.psentence{max-width:100%;text-align:right;font-size:15px;line-height:1.35;word-break:break-word;}'
+  /* -------- Purchases (shared base) -------- */
+  + '.p-top{display:grid;grid-template-columns:1fr 168px;gap:14px;align-items:center;padding:10px 14px 2px;direction:ltr;}'
+  + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:2px;align-items:stretch;direction:rtl;}'
+  + '.ptime-top{display:flex;justify-content:center;align-items:center;gap:6px;font-size:12.5px;color:#1f2937;opacity:.92;margin-top:-4px;}'
+  + '.ptime-top svg{width:14px;height:14px;opacity:.95;display:block;}'
+  + '.psentence{max-width:100%;text-align:right;font-size:15px;line-height:1.35;margin-top:2px;}'
   + '.psentence .buyer{font-weight:700;}'
   + '.psentence .prod{font-weight:700;color:#2578ff;}'
 
   + '.pmedia{grid-column:2;justify-self:end;display:flex;align-items:center;justify-content:center;position:relative;}'
-  + '.pframe{position:relative;width:148px;height:108px;border-radius:14px;border:2px solid #dfe7f0;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;}'
+  + '.pframe{position:relative;width:160px;height:116px;border-radius:14px;border:2px solid #dfe7f0;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;}'
   + '.pimg{width:100%;height:100%;object-fit:contain;background:#fff;display:block;}'
   + '.pimg-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#475569;font-weight:700;background:#f1f5f9;}'
 
-  /* Hot badge on image */
-  + '.hotcap{position:absolute;top:-12px;left:12px;z-index:3;}'
+  /* Hot badge centered over the image */
+  + '.hotcap{position:absolute;top:-12px;left:50%;transform:translateX(-50%);z-index:3;}'
   + '.badge-hot{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font:700 12.5px/1.1 system-ui,-apple-system,Segoe UI,Heebo,Arial,sans-serif;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;box-shadow:0 1px 0 rgba(0,0,0,.04);white-space:nowrap;}'
   + '.badge-hot svg{width:14px;height:14px}'
   + '.pulse{animation:pulse 2.8s ease-in-out infinite}'
   + '@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}50%{box-shadow:0 0 0 8px rgba(249,115,22,.12)}}'
 
-  /* Footer (desktop base) */
-  + '.p-foot{display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:6px 16px 14px;gap:12px;direction:ltr;}'
+  /* Compact footer: only the EVID pill at bottom-left */
+  + '.p-foot{display:grid;grid-template-columns:1fr auto;align-items:center;padding:6px 12px 8px;gap:0;direction:ltr;}'
   + '.foot-left{justify-self:start;}'
-  + '.foot-right{justify-self:end;}'
-  + '.pbadge{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 12px;border-radius:999px;background:#e9f8ec;border:1px solid #bfe8c8;font-size:12px;font-weight:700;color:#198038;white-space:nowrap;direction:ltr;}'
+  + '.foot-right{display:none;}'
+  + '.pbadge{display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 10px;border-radius:999px;background:#e9f8ec;border:1px solid #bfe8c8;font-size:11.5px;font-weight:700;color:#198038;white-space:nowrap;direction:ltr;}'
   + '.pbadge .check{width:16px;height:16px;display:inline-block;}'
-  + '.ptime{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#000;text-align:right;direction:rtl;}'
-  + '.ptime svg{width:14px;height:14px;opacity:.95;display:block;}'
-
-  /* Elements we show differently on mobile */
-  + '.ptime-top{display:none;color:#1f2937;opacity:.92;}'
-  + '.pbadge-mobile{display:none;}'
 
   /* Animations */
   + '.fade-in{animation:fadeIn .35s ease forwards;} .fade-out{animation:fadeOut .35s ease forwards;}'
   + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
   + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
 
-  /* Desktop — unchanged */
-  + '@media (min-width:720px){ .p-top{grid-template-columns:1fr 168px;} .pframe{width:160px;height:116px;} .ptime-top{display:none;} .pbadge-mobile{display:none;} }'
+  /* Desktop (kept compact as well) */
+  + '@media (min-width:720px){'
+  + '  .p-top{grid-template-columns:1fr 168px;padding:10px 14px 2px;gap:14px;}'
+  + '  .pframe{width:160px;height:116px;}'
+  + '}'
 
-  /* ===== MOBILE — match ref #2 exactly ===== */
+  /* Mobile */
   + '@media (max-width:480px){'
-  + '  .wrap{bottom:8px;}'
   + '  .card{width:330px;}'
-  + '  .row-r{grid-template-columns:34px 1fr 24px;gap:8px;padding:10px 10px 6px;}'
-  + '  .avatar,.avatar-fallback{width:34px;height:34px;}'
-  + '  .name{font-size:13px;}'
-  + '  .body{font-size:13px;line-height:1.3;padding:0 10px 10px;}'
-
-  /* TOP: tighter padding; time centered at top, sentence right under it */
-  + '  .p-top{grid-template-columns:1fr 144px;padding:6px 10px 0;gap:10px;}'
+  + '  .p-top{grid-template-columns:1fr 144px;padding:8px 12px 0;gap:10px;}'
   + '  .pframe{width:144px;height:104px;}'
-  + '  .hotcap{top:-10px;left:10px;}'
-  + '  .ptext{align-items:stretch;gap:2px;}' /* allow centering for time, RTL for sentence */
-  + '  .ptime-top{display:flex;justify-content:center;font-size:12.5px;margin:-6px 0 0;}' /* visually at X height */
-  + '  .psentence{font-size:15px;margin:2px 0 0;}' /* pushed up under time */
-
-  /* FOOTER: compact bar with ONLY the EVID pill (left). No time on right. */
-  + '  .p-foot{display:grid;grid-template-columns:1fr auto;align-items:center;padding:6px 12px 10px;gap:0;}'
-  + '  .foot-right{display:none;}'
-  + '  .pbadge{height:26px;padding:0 10px;font-size:11.5px;}'
-
-  /* no extra duplicates on mobile */
-  + '  .pbadge-mobile{display:none;}'
+  + '  .hotcap{top:-10px;}'
+  + '  .p-foot{padding:6px 12px 6px;}'
   + '}'
   ;
   root.appendChild(style);
@@ -187,7 +169,6 @@
       buyer:x.buyer||x.buyerName||x.customerName||x.name||x.customer||"לקוח/ה",
       product:x.product||x.productName||x.item||x.title||"מוצר",
       image:x.productImage||x.image||getPhotoUrl(x)||"",
-      url:x.productUrl||x.url||x.link||'#',
       purchased_at:x.purchased_at||x.created_at||x.time||x.timestamp||new Date().toISOString()
     };
   }
@@ -263,9 +244,9 @@
       + '<span class="gmark" aria-label="Google">'
       + '  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">'
       + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path>'
-      + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
+      + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36ל-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
       + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82В7.64H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
-      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48ל2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
+      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
       + '  </svg>'
       + '</span>'
       + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>'
@@ -286,8 +267,8 @@
 
     var textCol=document.createElement("div"); textCol.className="ptext";
 
-    // TIME — centered at the very top (mobile shows this)
-    var tTop=document.createElement("div"); tTop.className="ptime ptime-top";
+    // TIME — top center
+    var tTop=document.createElement("div"); tTop.className="ptime-top";
     tTop.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
                    + '  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>'
                    + '  <path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
@@ -316,7 +297,7 @@
     frame.appendChild(imgEl);
     media.appendChild(frame);
 
-    // HOT badge
+    // HOT badge — centered over image
     var hotcap = document.createElement('div'); hotcap.className = 'hotcap';
     hotcap.innerHTML = ''
       + '<span class="badge-hot pulse" role="status" aria-live="polite">'
@@ -329,9 +310,8 @@
     top.appendChild(media);
     card.appendChild(top);
 
-    /* ---------- FOOTER ---------- */
+    /* ---------- FOOTER (compact) ---------- */
     var foot=document.createElement("div"); foot.className="p-foot";
-
     var left=document.createElement("div"); left.className="foot-left";
     var pill=document.createElement("div"); pill.className="pbadge";
     pill.innerHTML = '<svg class="check" viewBox="0 0 24 24" aria-hidden="true">'
@@ -340,17 +320,7 @@
                    + '</svg>'
                    + '<span class="evid">EVID</span><span class="verified">מאומת</span>';
     left.appendChild(pill);
-
-    var right=document.createElement("div"); right.className="foot-right";
-    var tBottom=document.createElement("div"); tBottom.className="ptime";
-    tBottom.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
-                      +   '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>'
-                      +   '<path d="M12 7v5ל3 2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
-                      + '</svg>' + escapeHTML(timeAgo(p.purchased_at));
-    right.appendChild(tBottom);
-
     foot.appendChild(left);
-    foot.appendChild(right);
     card.appendChild(foot);
 
     return card;
