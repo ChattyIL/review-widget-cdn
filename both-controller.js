@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — MOBILE: time near image, footer removed, smaller height. Desktop unchanged. */
+/*! both-controller v3.6.4 — MOBILE: add 5px top/bottom, show time above sentence; footer hidden. Desktop unchanged. */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -54,10 +54,10 @@
   + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-  /* -------- Purchases (base) -------- */
+  /* -------- Purchases (compact baseline) -------- */
   + '.p-top{display:grid;grid-template-columns:1fr 168px;gap:12px;align-items:center;padding:8px 12px 2px;direction:ltr;}'
-  + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:2px;align-items:stretch;direction:rtl;}'
-  + '.ptime-top{display:flex;justify-content:flex-end;align-items:center;gap:6px;font-size:12.5px;color:#1f2937;opacity:.92;text-align:right;direction:rtl;}'
+  + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:4px;align-items:stretch;direction:rtl;}'
+  + '.ptime-top{display:flex;justify-content:flex-end;align-items:center;gap:6px;font-size:12.5px;color:#1f2937;opacity:.92;text-align:right;direction:rtl;margin:0;}'
   + '.ptime-top svg{width:14px;height:14px;opacity:.95;display:block;}'
   + '.psentence{max-width:100%;text-align:right;font-size:15px;line-height:1.35;margin:0;word-break:break-word;}'
   + '.psentence .buyer{font-weight:700;}'
@@ -68,32 +68,30 @@
   + '.pimg{width:100%;height:100%;object-fit:contain;background:#fff;display:block;}'
   + '.pimg-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#475569;font-weight:700;background:#f1f5f9;}'
 
-  /* Hot badge (center over image) */
+  /* Hot badge — centered over image */
   + '.hotcap{position:absolute;top:-12px;left:50%;transform:translateX(-50%);z-index:3;}'
   + '.badge-hot{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font:700 12.5px/1.1 system-ui,-apple-system,Segoe UI,Heebo,Arial,sans-serif;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;box-shadow:0 1px 0 rgba(0,0,0,.04);white-space:nowrap;}'
   + '.badge-hot svg{width:14px;height:14px}'
   + '.pulse{animation:pulse 2.8s ease-in-out infinite}'
   + '@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}50%{box-shadow:0 0 0 8px rgba(249,115,22,.12)}}'
 
-  /* Footer: desktop shows EVID; mobile hides completely to remove white space */
+  /* Footer (desktop visible, mobile hidden) */
   + '.p-foot{display:grid;grid-template-columns:1fr auto;align-items:center;padding:6px 12px 8px;gap:0;direction:ltr;}'
   + '.foot-left{justify-self:start;}'
   + '.pbadge{display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 10px;border-radius:999px;background:#e9f8ec;border:1px solid #bfe8c8;font-size:11.5px;font-weight:700;color:#198038;white-space:nowrap;direction:ltr;}'
   + '.pbadge .check{width:16px;height:16px;display:inline-block;}'
   + '.foot-right{display:none;}'
 
-  /* Mobile-specific: time near image (inside right column), hide footer to shrink height */
+  /* Mobile-only tweaks: +5px top & bottom, hide footer, time above sentence */
   + '@media (max-width:480px){'
   + '  .card{width:330px;}'
-  + '  .p-top{grid-template-columns:1fr 144px;padding:8px 10px 0;gap:10px;}'
+  + '  .p-top{grid-template-columns:1fr 144px;padding:13px 10px 5px;gap:10px;}/* +5 top, +5 bottom */'
   + '  .pframe{width:144px;height:104px;}'
   + '  .hotcap{top:-10px;}'
-  + '  .p-foot{display:none;}/* remove white space under image/sentence */'
-  + '  .ptime-chip{position:absolute;top:-12px;right:0;display:flex;align-items:center;gap:6px;font-size:12px;color:#1f2937;opacity:.92;background:transparent;padding:0;margin:0;}'
-  + '  .ptime-chip svg{width:14px;height:14px;opacity:.95;display:block;}'
+  + '  .p-foot{display:none;}/* remove bottom white space */'
   + '}'
 
-  /* Desktop unchanged layout (but compact paddings kept) */
+  /* Desktop (unchanged layout) */
   + '@media (min-width:720px){'
   + '  .p-top{grid-template-columns:1fr 168px;}'
   + '  .pframe{width:160px;height:116px;}'
@@ -241,7 +239,7 @@
       + '<span class="gmark" aria-label="Google">'
       + '  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">'
       + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path>'
-      + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
+      + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36ל-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22ז"></path>'
       + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82В7.64H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
       + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
       + '  </svg>'
@@ -264,20 +262,20 @@
 
     var textCol=document.createElement("div"); textCol.className="ptext";
 
-    // TIME node (we'll place it differently for mobile)
-    var tEl=document.createElement("div");
-    tEl.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
-                  + '  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>'
-                  + '  <path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
-                  + '</svg>' + escapeHTML(timeAgo(p.purchased_at));
+    // TIME — always above the sentence (mobile+desktop)
+    var tTop=document.createElement("div"); tTop.className="ptime-top";
+    tTop.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
+                   + '  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>'
+                   + '  <path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+                   + '</svg>' + escapeHTML(timeAgo(p.purchased_at));
+    textCol.appendChild(tTop);
 
     // MAIN SENTENCE
     var sentence=document.createElement("div"); sentence.className="psentence";
     var buyerFirst = firstName(p.buyer);
     sentence.innerHTML = '<strong class="buyer">'+escapeHTML(buyerFirst)+'</strong> רכש/ה '
                        + '<span class="prod">'+escapeHTML(p.product)+'</span>';
-
-    textCol.appendChild(sentence); // sentence should appear first visually on desktop
+    textCol.appendChild(sentence);
 
     // IMAGE
     var media=document.createElement("div"); media.className="pmedia";
@@ -303,21 +301,11 @@
       + '</span>';
     media.appendChild(hotcap);
 
-    // Place TIME: desktop = left column, top-right; mobile = near the image (inside right column)
-    var isMobile = typeof window !== "undefined" && window.matchMedia && window.matchMedia('(max-width: 480px)').matches;
-    if (isMobile) {
-      tEl.className = 'ptime-chip';      // absolute on the media side, near the image
-      media.appendChild(tEl);
-    } else {
-      tEl.className = 'ptime-top';
-      textCol.insertBefore(tEl, sentence); // show time above sentence
-    }
-
     top.appendChild(textCol);
     top.appendChild(media);
     card.appendChild(top);
 
-    /* ---------- FOOTER (desktop only) ---------- */
+    /* ---------- FOOTER (desktop only; hidden on mobile via CSS) ---------- */
     var foot=document.createElement("div"); foot.className="p-foot";
     var left=document.createElement("div"); left.className="foot-left";
     var pill=document.createElement("div"); pill.className="pbadge";
