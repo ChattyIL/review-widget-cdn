@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — MOBILE: time centered above text, EVID pill under text; Desktop unchanged */
+/*! both-controller v3.6.4 — MOBILE: time above text, NO EVID pill (compact); Desktop unchanged */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -75,24 +75,21 @@
   + '.pulse{animation:pulse 2.8s ease-in-out infinite}'
   + '@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}50%{box-shadow:0 0 0 8px rgba(249,115,22,.12)}}'
 
-  /* Footer (EVID pill container) */
+  /* Footer (EVID pill for desktop) */
   + '.p-foot{display:grid;grid-template-columns:1fr auto;align-items:center;padding:6px 12px 8px;gap:0;direction:ltr;}'
   + '.foot-left{justify-self:start;}'
   + '.pbadge{display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 10px;border-radius:999px;background:#e9f8ec;border:1px solid #bfe8c8;font-size:11.5px;font-weight:700;color:#198038;white-space:nowrap;direction:ltr;}'
   + '.pbadge .check{width:16px;height:16px;display:inline-block;}'
   + '.foot-right{display:none;}'
 
-  /* ===== MOBILE tweaks to match your mock EXACTLY ===== */
+  /* ===== MOBILE (no EVID pill; compact height) ===== */
   + '@media (max-width:480px){'
   + '  .card{width:330px;}'
-  + '  .p-top{grid-template-columns:1fr 144px;padding:13px 10px 5px;gap:10px;}/* extra ~5px top & bottom */'
+  + '  .p-top{grid-template-columns:1fr 144px;padding:13px 10px 5px;gap:10px;}/* balanced + compact */'
   + '  .pframe{width:144px;height:104px;}'
   + '  .hotcap{top:-10px;}'
-  + '  /* time above sentence and visually centered within the left column */'
   + '  .ptime-top{justify-content:center;margin-bottom:2px;}'
-  + '  /* show the EVID pill under sentence (left column feel) with compact spacing */'
-  + '  .p-foot{display:block;padding:6px 10px 6px;}'
-  + '  .foot-left{display:flex;justify-content:flex-start;}'
+  + '  .p-foot{display:none !important;}/* hide מאומת/EVID on mobile to keep height small */'
   + '}'
 
   /* Desktop (unchanged layout) */
@@ -309,7 +306,7 @@
     top.appendChild(media);
     card.appendChild(top);
 
-    /* ---------- FOOTER (EVID pill) ---------- */
+    /* ---------- FOOTER (desktop only) ---------- */
     var foot=document.createElement("div"); foot.className="p-foot";
     var left=document.createElement("div"); left.className="foot-left";
     var pill=document.createElement("div"); pill.className="pbadge";
