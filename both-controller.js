@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — purchase: time top-center, compact height, EVID up-left, hot badge centered (mobile + desktop) */
+/*! both-controller v3.6.4 — PURCHASE: time top-right aligned with sentence, compact height (mobile + desktop) */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -54,12 +54,13 @@
   + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-  /* -------- Purchases (shared base) -------- */
-  + '.p-top{display:grid;grid-template-columns:1fr 168px;gap:14px;align-items:center;padding:10px 14px 2px;direction:ltr;}'
+  /* -------- Purchases (compact) -------- */
+  /* Top row: LEFT (time top-right + sentence), RIGHT (image with centered hot badge) */
+  + '.p-top{display:grid;grid-template-columns:1fr 168px;gap:12px;align-items:center;padding:6px 12px 0;direction:ltr;}'
   + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:2px;align-items:stretch;direction:rtl;}'
-  + '.ptime-top{display:flex;justify-content:center;align-items:center;gap:6px;font-size:12.5px;color:#1f2937;opacity:.92;margin-top:-4px;}'
+  + '.ptime-top{display:flex;justify-content:flex-end;align-items:center;gap:6px;font-size:12.5px;color:#1f2937;opacity:.92;margin-top:-4px;text-align:right;direction:rtl;padding-inline-end:2px;}'
   + '.ptime-top svg{width:14px;height:14px;opacity:.95;display:block;}'
-  + '.psentence{max-width:100%;text-align:right;font-size:15px;line-height:1.35;margin-top:2px;}'
+  + '.psentence{max-width:100%;text-align:right;font-size:15px;line-height:1.35;margin:0;word-break:break-word;}'
   + '.psentence .buyer{font-weight:700;}'
   + '.psentence .prod{font-weight:700;color:#2578ff;}'
 
@@ -68,18 +69,18 @@
   + '.pimg{width:100%;height:100%;object-fit:contain;background:#fff;display:block;}'
   + '.pimg-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#475569;font-weight:700;background:#f1f5f9;}'
 
-  /* Hot badge centered over the image */
+  /* Hot badge — centered over image */
   + '.hotcap{position:absolute;top:-12px;left:50%;transform:translateX(-50%);z-index:3;}'
   + '.badge-hot{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font:700 12.5px/1.1 system-ui,-apple-system,Segoe UI,Heebo,Arial,sans-serif;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;box-shadow:0 1px 0 rgba(0,0,0,.04);white-space:nowrap;}'
   + '.badge-hot svg{width:14px;height:14px}'
   + '.pulse{animation:pulse 2.8s ease-in-out infinite}'
   + '@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}50%{box-shadow:0 0 0 8px rgba(249,115,22,.12)}}'
 
-  /* Compact footer: only the EVID pill at bottom-left */
-  + '.p-foot{display:grid;grid-template-columns:1fr auto;align-items:center;padding:6px 12px 8px;gap:0;direction:ltr;}'
+  /* Compact footer — only EVID pill at bottom-left; trimmed paddings for shorter height */
+  + '.p-foot{display:grid;grid-template-columns:1fr auto;align-items:center;padding:2px 12px 6px;gap:0;direction:ltr;}'
   + '.foot-left{justify-self:start;}'
   + '.foot-right{display:none;}'
-  + '.pbadge{display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 10px;border-radius:999px;background:#e9f8ec;border:1px solid #bfe8c8;font-size:11.5px;font-weight:700;color:#198038;white-space:nowrap;direction:ltr;}'
+  + '.pbadge{display:inline-flex;align-items:center;gap:8px;height:24px;padding:0 10px;border-radius:999px;background:#e9f8ec;border:1px solid #bfe8c8;font-size:11.5px;font-weight:700;color:#198038;white-space:nowrap;direction:ltr;}'
   + '.pbadge .check{width:16px;height:16px;display:inline-block;}'
 
   /* Animations */
@@ -87,19 +88,19 @@
   + '@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}'
   + '@keyframes fadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}'
 
-  /* Desktop (kept compact as well) */
+  /* Desktop (compact also) */
   + '@media (min-width:720px){'
-  + '  .p-top{grid-template-columns:1fr 168px;padding:10px 14px 2px;gap:14px;}'
+  + '  .p-top{grid-template-columns:1fr 168px;padding:6px 12px 0;gap:12px;}'
   + '  .pframe{width:160px;height:116px;}'
   + '}'
 
   /* Mobile */
   + '@media (max-width:480px){'
   + '  .card{width:330px;}'
-  + '  .p-top{grid-template-columns:1fr 144px;padding:8px 12px 0;gap:10px;}'
+  + '  .p-top{grid-template-columns:1fr 144px;padding:6px 10px 0;gap:10px;}'
   + '  .pframe{width:144px;height:104px;}'
   + '  .hotcap{top:-10px;}'
-  + '  .p-foot{padding:6px 12px 6px;}'
+  + '  .p-foot{padding:2px 10px 6px;}'
   + '}'
   ;
   root.appendChild(style);
@@ -267,7 +268,7 @@
 
     var textCol=document.createElement("div"); textCol.className="ptext";
 
-    // TIME — top center
+    // TIME — top RIGHT (align with sentence start)
     var tTop=document.createElement("div"); tTop.className="ptime-top";
     tTop.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
                    + '  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>'
