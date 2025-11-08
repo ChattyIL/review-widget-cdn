@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — smooth in/out, MAX_WORDS=60, shrink by words, G logo fix */
+/*! both-controller v3.6.4 — Assistant font desktop+mobile, mobile sticky bottom, mobile review char limit=30, smooth in/out, Google SVG fix */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -13,7 +13,11 @@
   var SHOW_MS   = Number((scriptEl && scriptEl.getAttribute("data-show-ms"))       || 15000);
   var GAP_MS    = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))        || 6000);
   var INIT_MS   = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
-  var MAX_WORDS = Number((scriptEl && scriptEl.getAttribute("data-max-words"))     || 60); // 60 words
+
+  /* limits */
+  var MAX_WORDS_DESKTOP = 60;   // desktop: limit by words (for reviews)
+  var MAX_CHARS_MOBILE  = 30;   // mobile: limit by characters (for reviews)
+
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
   function log(){ if (DEBUG) { var a=["[both-controller v3.6.4]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
@@ -28,14 +32,20 @@
   style.textContent = ''
   + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
   + ':host{all:initial;}'
-  + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}'
-  + '.wrap *{font-family:inherit;box-sizing:border-box;}'
+
+  /* wrapper (desktop default) */
+  + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;'
+  + '  font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial!important;'
+  + '  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}'
+  + '.wrap *{font-family:inherit!important;box-sizing:border-box;}'
 
   /* Card */
-  + '.card{position:relative;width:370px;max-width:92vw;background:#fff;color:#0b1220;border-radius:18px;box-shadow:0 16px 40px rgba(2,6,23,.18);border:1px solid rgba(2,6,23,.06);overflow:hidden;}'
+  + '.card{position:relative;width:370px;max-width:92vw;background:#fff;color:#0b1220;border-radius:18px;'
+  + '  box-shadow:0 16px 40px rgba(2,6,23,.18);border:1px solid rgba(2,6,23,.06);overflow:hidden;}'
 
   /* Close button */
-  + '.xbtn{position:absolute;top:10px;left:10px;appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
+  + '.xbtn{position:absolute;top:10px;left:10px;appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;'
+  + '  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
   + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;} .xbtn:active{transform:translateY(0);}'
 
   /* -------- Reviews -------- */
@@ -55,7 +65,7 @@
   + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-  /* -------- Purchases (compact + unified mobile/desktop) -------- */
+  /* -------- Purchases (unchanged compact layout) -------- */
   + '.p-top{display:grid;grid-template-columns:1fr 168px;gap:12px;align-items:center;padding:13px 12px 6px;direction:ltr;}'
   + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:4px;align-items:stretch;direction:rtl;}'
   + '.ptime-top{display:flex;align-items:center;gap:6px;justify-content:center;font-size:12.5px;color:#1f2937;opacity:.92;text-align:right;direction:rtl;margin:0;}'
@@ -68,30 +78,30 @@
   + '.pimg{width:100%;height:100%;object-fit:contain;background:#fff;display:block;}'
   + '.pimg-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#475569;font-weight:700;background:#f1f5f9;}'
   + '.hotcap{position:absolute;top:-12px;left:50%;transform:translateX(-50%);z-index:3;}'
-  + '.badge-hot{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font:700 12.5px/1.1 system-ui,-apple-system,Segoe UI,Heebo,Arial,sans-serif;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;box-shadow:0 1px 0 rgba(0,0,0,.04);white-space:nowrap;}'
+  + '.badge-hot{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font:700 12.5px/1.1 "Assistant",system-ui,-apple-system,Segoe UI,Heebo,Arial,sans-serif;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;box-shadow:0 1px 0 rgba(0,0,0,.04);white-space:nowrap;}'
   + '.badge-hot svg{width:14px;height:14px}'
   + '.pulse{animation:pulse 2.8s ease-in-out infinite}'
   + '@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}50%{box-shadow:0 0 0 8px rgba(249,115,22,.12)}}'
-  + '.p-foot{display:none !important;}' /* no EVID/extra footer */
+  + '.p-foot{display:none!important;}'
 
-  /* -------- Smooth entry / exit -------- */
+  /* Smooth in/out */
   + '.enter{animation:floatIn .42s cubic-bezier(.22,.61,.36,1) forwards;}'
   + '.leave{animation:floatOut .36s cubic-bezier(.22,.61,.36,1) forwards;}'
   + '@keyframes floatIn{0%{opacity:0;transform:translateY(10px) scale(.98);filter:blur(2px);}100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}}'
   + '@keyframes floatOut{0%{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}100%{opacity:0;transform:translateY(8px) scale(.985);filter:blur(1px);}}'
 
-  /* Mobile */
+  /* MOBILE: stick to bottom (no gap), full width */
   + '@media (max-width:480px){'
-  + '  .card{width:330px;}'
+  + '  .wrap{right:0;left:0;bottom:0;padding:0 0 env(safe-area-inset-bottom,0);}'
+  + '  .card{width:100%;max-width:none;border-radius:16px 16px 0 0;margin:0;}'
+  + '  .row-r{padding:12px 10px 8px;}'
   + '  .p-top{grid-template-columns:1fr 144px;padding:13px 10px 6px;gap:10px;}'
   + '  .pframe{width:144px;height:104px;}'
   + '  .hotcap{top:-10px;}'
   + '}'
 
-  /* Desktop */
-  + '@media (min-width:720px){'
-  + '  .pframe{width:160px;height:116px;}'
-  + '}'
+  /* DESKTOP image sizing */
+  + '@media (min-width:720px){ .pframe{width:160px;height:116px;} }'
   ;
   root.appendChild(style);
 
@@ -100,19 +110,33 @@
   root.appendChild(wrap);
 
   /* ---- helpers ---- */
+  var IS_MOBILE = (typeof window !== "undefined") && window.matchMedia && window.matchMedia('(max-width:480px)').matches;
+
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
   function escapeHTML(s){ return String(s||"").replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]);}); }
   function firstName(s){ s=String(s||"").trim(); var parts=s.split(/\s+/); return parts[0]||s; }
-  function truncateWords(s,n){ s=(s||"").replace(/\s+/g," ").trim(); var p=s?s.split(" "):[]; return p.length>n?p.slice(0,n).join(" ")+"…":s; }
-  function scaleClassByWords(text){
+
+  /* Truncation: MOBILE by characters, DESKTOP by words (reviews only) */
+  function truncateForReview(text){
     var t=(text||"").replace(/\s+/g," ").trim();
-    if(!t) return "";
-    var w=t.split(" ").length;
-    if(w>40) return "tiny";   // > 40 words → tiny
-    if(w>26) return "small";  // > 26 words → small
+    if(IS_MOBILE){                       // characters on mobile
+      var n = MAX_CHARS_MOBILE;
+      return t.length>n ? t.slice(0,n).trim()+"…" : t;
+    }else{                               // words on desktop
+      var words = t ? t.split(" ") : [];
+      return words.length>MAX_WORDS_DESKTOP ? words.slice(0,MAX_WORDS_DESKTOP).join(" ")+"…" : t;
+    }
+  }
+  /* Scale: desktop by word count; mobile not needed (already short) */
+  function scaleClassForReview(text){
+    if(IS_MOBILE) return "";
+    var w = String(text||"").trim().split(/\s+/).length;
+    if(w>40) return "tiny";
+    if(w>26) return "small";
     return "";
   }
+
   function timeAgo(ts){
     try{ var d=new Date(ts);
       var diff=Math.max(0,(Date.now()-d.getTime())/1000);
@@ -124,7 +148,7 @@
     }catch(_){ return ""; }
   }
 
-  /* Avatar helpers */
+  /* Avatars */
   function renderMonogram(name){ var d=document.createElement("div"); d.className="avatar-fallback"; d.textContent=firstLetter(name); d.style.background=colorFromString(name); return d; }
   function renderAvatarPreloaded(name, url){
     var shell = renderMonogram(name);
@@ -136,23 +160,8 @@
     }
     return shell;
   }
-  function renderAvatar(name,url){
-    var d=document.createElement("div"); d.className="avatar-fallback";
-    d.textContent=(name||"?").trim().charAt(0).toUpperCase()||"?";
-    var s=name||"", h=0; for(var i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0;
-    d.style.background="hsl("+(h%360)+" 70% 45%)";
-    if(url){
-      var pre = new Image();
-      pre.width=40; pre.height=40; pre.decoding="async"; pre.loading="eager";
-      pre.onload=function(){ var img=document.createElement("img"); img.className="avatar"; img.alt=""; img.width=40; img.height=40; img.decoding="async"; img.loading="eager"; img.src=url; d.replaceWith(img); };
-      pre.onerror=function(){};
-      pre.src=url;
-    }
-    return d;
-  }
-  function renderAvatarLazy(name, url){ return renderAvatar(name, url); }
 
-  /* ---- robust parsers ---- */
+  /* ---- parsers ---- */
   function getPhotoUrl(o){
     if(!o||typeof o!=="object") return "";
     var k=Object.keys(o); for(var i=0;i<k.length;i++){ var n=k[i], ln=n.toLowerCase();
@@ -200,11 +209,9 @@
     return arr;
   }
 
-  /* ---- fetchers with mirror failover ---- */
+  /* ---- fetchers ---- */
   var JS_MIRRORS = ["https://cdn.jsdelivr.net","https://fastly.jsdelivr.net","https://gcore.jsdelivr.net"];
-  function rewriteToMirror(u, mirror){
-    try { var a=new URL(u), m=new URL(mirror); a.protocol=m.protocol; a.host=m.host; return a.toString(); } catch(_){ return u; }
-  }
+  function rewriteToMirror(u, mirror){ try { var a=new URL(u), m=new URL(mirror); a.protocol=m.protocol; a.host=m.host; return a.toString(); } catch(_){ return u; } }
   function fetchTextWithMirrors(u){
     var opts = {method:"GET", credentials:"omit", cache:"no-store"};
     var i = 0, isJSD = /(^https?:)?\/\/([^\/]*jsdelivr\.net)/i.test(u);
@@ -243,17 +250,17 @@
     header.appendChild(avatarEl); header.appendChild(meta); header.appendChild(document.createElement("span"));
 
     var body=document.createElement("div");
-    var shortText=truncateWords(item.text, MAX_WORDS);
-    body.className="body "+scaleClassByWords(shortText); body.textContent=shortText;
+    var shortText=truncateForReview(item.text);
+    body.className="body "+scaleClassForReview(shortText); body.textContent=shortText;
 
     var brand=document.createElement("div"); brand.className="brand";
     brand.innerHTML = ''
       + '<span class="gmark" aria-label="Google">'
       + '  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">'
-      + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path>'
-      + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
-      + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82В7.64H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
-      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
+      + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.26 1.43-1.03 2.6-2.18 3.38l2.57 2.04C20.06 18.15 21.35 15.87 21.35 13c0-.64-.06-1.24-.17-1.9z"></path>'
+      + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.9.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56C5.12 20.47 8.39 22 12.18 22z"></path>'
+      + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72l3.29-2.34z"></path>'
+      + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2C8.4 2 5.17 4.17 3.4 7.64l3.29 2.56C7.46 7.88 9.62 5.5 12.18 5.5z"></path>'
       + '  </svg>'
       + '</span>'
       + '<span class="gstars" aria-label="5 star rating">★ ★ ★ ★ ★</span>'
@@ -264,14 +271,11 @@
 
   function renderPurchaseCard(p){
     var card=document.createElement("div"); card.className="card enter";
-
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
     x.addEventListener("click",function(){ card.classList.remove("enter"); card.classList.add("leave"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 360); });
     card.appendChild(x);
 
-    /* ---------- TOP ---------- */
     var top=document.createElement("div"); top.className="p-top";
-
     var textCol=document.createElement("div"); textCol.className="ptext";
 
     var tTop=document.createElement("div"); tTop.className="ptime-top";
@@ -302,17 +306,14 @@
     media.appendChild(frame);
 
     var hotcap = document.createElement('div'); hotcap.className = 'hotcap';
-    hotcap.innerHTML = ''
-      + '<span class="badge-hot pulse" role="status" aria-live="polite">'
-      + '  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 2s1 3-1.5 5.5S9 12 9 14a5 5 0 0010 0c0-3-2-4.5-3-6.5-1-2 0-5-2.5-5.5z"/></svg>'
-      + '  פופולרי עכשיו'
-      + '</span>';
+    hotcap.innerHTML = '<span class="badge-hot pulse" role="status" aria-live="polite">'
+      + '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 2s1 3-1.5 5.5S9 12 9 14a5 5 0 0010 0c0-3-2-4.5-3-6.5-1-2 0-5-2.5-5.5z"/></svg>'
+      + 'פופולרי עכשיו</span>';
     media.appendChild(hotcap);
 
     top.appendChild(textCol);
     top.appendChild(media);
     card.appendChild(top);
-
     return card;
   }
 
@@ -334,7 +335,7 @@
     var card = (itm.kind==="purchase") ? renderPurchaseCard(itm.data) : renderReviewCard(itm.data);
     wrap.innerHTML=""; wrap.appendChild(card);
 
-    var OUT_MS = 360; // leave animation length
+    var OUT_MS = 360;
     setTimeout(function(){ card.classList.remove("enter"); card.classList.add("leave"); }, Math.max(0, SHOW_MS - OUT_MS));
     setTimeout(function(){ if(card && card.parentNode){ card.parentNode.removeChild(card); } }, SHOW_MS);
   }
@@ -349,6 +350,13 @@
   }
 
   /* ---- data loading ---- */
+  function loadAll(){
+    var p1 = REVIEWS_EP ? fetchJSON(REVIEWS_EP).then(function(d){ var a=normalizeArray(d,"review"); log("reviews:", a.length); return a; }).catch(function(e){ console.warn("reviews fetch err:", e); return []; }) : Promise.resolve([]);
+    var p2 = PURCHASES_EP ? fetchJSON(PURCHASES_EP).then(function(d){ var a=normalizeArray(d,"purchase"); log("purchases:", a.length); return a; }).catch(function(e){ console.warn("purchases fetch err:", e); return []; }) : Promise.resolve([]);
+    Promise.all([p1,p2]).then(function(r){ var rev = r[0]||[], pur = r[1]||[]; items = interleave(rev, pur); log("total items:", items.length); start(); })
+    .catch(function(e){ root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Widget error: '+ String(e && e.message || e) +'</div>'; console.error("[both-controller v3.6.4]", e); });
+  }
+  function fetchJSON(url){ return fetchTextWithMirrors(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } }); }
   function fetchTextWithMirrors(u){
     var opts = {method:"GET", credentials:"omit", cache:"no-store"};
     var i = 0, isJSD = /(^https?:)?\/\/([^\/]*jsdelivr\.net)/i.test(u);
@@ -360,22 +368,17 @@
           return raw;
         });
       }).catch(function(err){
-        if(isJSD && i < ["https://cdn.jsdelivr.net","https://fastly.jsdelivr.net","https://gcore.jsdelivr.net"].length-1){
-          i++; var next = ["https://cdn.jsdelivr.net","https://fastly.jsdelivr.net","https://gcore.jsdelivr.net"][i];
-          try{ var a=new URL(u), m=new URL(next); a.protocol=m.protocol; a.host=m.host; var mirrored=a.toString(); return attempt(mirrored + (mirrored.indexOf("?")>-1?"&":"?") + "t="+Date.now()); }catch(_){ throw err; }
+        if(isJSD && i < JS_MIRRORS.length-1){
+          i++; var next = rewriteToMirror(u, JS_MIRRORS[i]);
+          if (DEBUG) console.warn("[both-controller] mirror retry", next);
+          return attempt(next + (next.indexOf('?')>-1?'&':'?') + 't=' + Date.now());
         }
         throw err;
       });
     }
     return attempt(urlWithBuster);
   }
-  function fetchJSON(url){ return fetchTextWithMirrors(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } }); }
+  function rewriteToMirror(u, mirror){ try { var a=new URL(u), m=new URL(mirror); a.protocol=m.protocol; a.host=m.host; return a.toString(); } catch(_){ return u; } }
 
-  function loadAll(){
-    var p1 = REVIEWS_EP ? fetchJSON(REVIEWS_EP).then(function(d){ var a=normalizeArray(d,"review"); log("reviews:", a.length); return a; }).catch(function(e){ console.warn("reviews fetch err:", e); return []; }) : Promise.resolve([]);
-    var p2 = PURCHASES_EP ? fetchJSON(PURCHASES_EP).then(function(d){ var a=normalizeArray(d,"purchase"); log("purchases:", a.length); return a; }).catch(function(e){ console.warn("purchases fetch err:", e); return []; }) : Promise.resolve([]);
-    Promise.all([p1,p2]).then(function(r){ var rev = r[0]||[], pur = r[1]||[]; items = interleave(rev, pur); log("total items:", items.length); start(); })
-    .catch(function(e){ root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Widget error: '+ String(e && e.message || e) +'</div>'; console.error("[both-controller v3.6.4]", e); });
-  }
   loadAll();
 })();
