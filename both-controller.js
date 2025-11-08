@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — Purchase layout unified (mobile = desktop), compact, NO EVID pill; MAX_WORDS=60; shrink by words: >26 small, >40 tiny */
+/*! both-controller v3.6.4 — smooth in/out, MAX_WORDS=60, shrink by words, G logo fix */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -13,7 +13,7 @@
   var SHOW_MS   = Number((scriptEl && scriptEl.getAttribute("data-show-ms"))       || 15000);
   var GAP_MS    = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))        || 6000);
   var INIT_MS   = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
-  var MAX_WORDS = Number((scriptEl && scriptEl.getAttribute("data-max-words"))     || 60); // ← 60 words default
+  var MAX_WORDS = Number((scriptEl && scriptEl.getAttribute("data-max-words"))     || 60); // 60 words
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
   function log(){ if (DEBUG) { var a=["[both-controller v3.6.4]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
@@ -23,7 +23,7 @@
     return;
   }
 
-  /* ========== styles =========== */
+  /* ========== styles ========== */
   var style = document.createElement("style");
   style.textContent = ''
   + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
@@ -38,7 +38,7 @@
   + '.xbtn{position:absolute;top:10px;left:10px;appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
   + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;} .xbtn:active{transform:translateY(0);}'
 
-  /* -------- Reviews (unchanged structure) -------- */
+  /* -------- Reviews -------- */
   + '.row-r{display:grid;grid-template-columns:40px 1fr 24px;gap:12px;align-items:center;padding:12px 12px 8px;direction:rtl;}'
   + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#eef2f7;display:block;border:1px solid rgba(2,6,23,.06);}'
   + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;}'
@@ -46,15 +46,16 @@
   + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
   + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;direction:rtl;}'
   + '.body.small{font-size:12.5px;} .body.tiny{font-size:11.5px;}'
-  + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(2,6,23,.07);font-size:12px;opacity:.95;direction:rtl;}'
-  + '.gmark{display:flex;align-items:center;}'
+  + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(2,6,23,.07);font-size:12px;opacity:.95;direction:rtl;overflow:visible;}'
+  + '.gmark{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;overflow:visible;}'
+  + '.gmark svg{width:18px;height:18px;display:block;overflow:visible;}'
   + '.gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
   + '.badgeText{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.9;}'
   + '.badgeText .verified{color:#444;font-weight:600;}'
   + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-  /* -------- Purchases (unified layout) -------- */
+  /* -------- Purchases (compact + unified mobile/desktop) -------- */
   + '.p-top{display:grid;grid-template-columns:1fr 168px;gap:12px;align-items:center;padding:13px 12px 6px;direction:ltr;}'
   + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:4px;align-items:stretch;direction:rtl;}'
   + '.ptime-top{display:flex;align-items:center;gap:6px;justify-content:center;font-size:12.5px;color:#1f2937;opacity:.92;text-align:right;direction:rtl;margin:0;}'
@@ -62,23 +63,24 @@
   + '.psentence{max-width:100%;text-align:right;font-size:15px;line-height:1.35;margin:0;word-break:break-word;}'
   + '.psentence .buyer{font-weight:700;}'
   + '.psentence .prod{font-weight:700;color:#2578ff;}'
-
   + '.pmedia{grid-column:2;justify-self:end;display:flex;align-items:center;justify-content:center;position:relative;}'
   + '.pframe{position:relative;width:160px;height:116px;border-radius:14px;border:2px solid #dfe7f0;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;}'
   + '.pimg{width:100%;height:100%;object-fit:contain;background:#fff;display:block;}'
   + '.pimg-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#475569;font-weight:700;background:#f1f5f9;}'
-
-  /* Hot badge — centered over image */
   + '.hotcap{position:absolute;top:-12px;left:50%;transform:translateX(-50%);z-index:3;}'
   + '.badge-hot{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font:700 12.5px/1.1 system-ui,-apple-system,Segoe UI,Heebo,Arial,sans-serif;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;box-shadow:0 1px 0 rgba(0,0,0,.04);white-space:nowrap;}'
   + '.badge-hot svg{width:14px;height:14px}'
   + '.pulse{animation:pulse 2.8s ease-in-out infinite}'
   + '@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}50%{box-shadow:0 0 0 8px rgba(249,115,22,.12)}}'
+  + '.p-foot{display:none !important;}' /* no EVID/extra footer */
 
-  /* No footer/EVID anywhere */
-  + '.p-foot{display:none !important;}'
+  /* -------- Smooth entry / exit -------- */
+  + '.enter{animation:floatIn .42s cubic-bezier(.22,.61,.36,1) forwards;}'
+  + '.leave{animation:floatOut .36s cubic-bezier(.22,.61,.36,1) forwards;}'
+  + '@keyframes floatIn{0%{opacity:0;transform:translateY(10px) scale(.98);filter:blur(2px);}100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}}'
+  + '@keyframes floatOut{0%{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}100%{opacity:0;transform:translateY(8px) scale(.985);filter:blur(1px);}}'
 
-  /* Mobile image size tweak */
+  /* Mobile */
   + '@media (max-width:480px){'
   + '  .card{width:330px;}'
   + '  .p-top{grid-template-columns:1fr 144px;padding:13px 10px 6px;gap:10px;}'
@@ -86,7 +88,7 @@
   + '  .hotcap{top:-10px;}'
   + '}'
 
-  /* Desktop keeps same unified structure; only image size a bit larger */
+  /* Desktop */
   + '@media (min-width:720px){'
   + '  .pframe{width:160px;height:116px;}'
   + '}'
@@ -100,23 +102,19 @@
   /* ---- helpers ---- */
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
-  function escapeHTML(s){ return String(s||"").replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;"," >":"&gt;","\"":"&quot;","'":"&#39;"}[c]);}); }
+  function escapeHTML(s){ return String(s||"").replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]);}); }
   function firstName(s){ s=String(s||"").trim(); var parts=s.split(/\s+/); return parts[0]||s; }
   function truncateWords(s,n){ s=(s||"").replace(/\s+/g," ").trim(); var p=s?s.split(" "):[]; return p.length>n?p.slice(0,n).join(" ")+"…":s; }
-
-  // count words and assign size class based on word thresholds
-  function scaleClass(text){
+  function scaleClassByWords(text){
     var t=(text||"").replace(/\s+/g," ").trim();
     if(!t) return "";
-    var words = t.split(" ").length;
-    if(words>40) return "tiny";   // > 40 words → tiny
-    if(words>26) return "small";  // > 26 words → small
+    var w=t.split(" ").length;
+    if(w>40) return "tiny";   // > 40 words → tiny
+    if(w>26) return "small";  // > 26 words → small
     return "";
   }
-
   function timeAgo(ts){
-    try{
-      var d=new Date(ts);
+    try{ var d=new Date(ts);
       var diff=Math.max(0,(Date.now()-d.getTime())/1000);
       var m=Math.floor(diff/60), h=Math.floor(m/60), d2=Math.floor(h/24);
       if(d2>0) return d2===1?"אתמול":"לפני "+d2+" ימים";
@@ -232,9 +230,9 @@
 
   /* ---- renderers ---- */
   function renderReviewCard(item){
-    var card=document.createElement("div"); card.className="card fade-in";
+    var card=document.createElement("div"); card.className="card enter";
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
-    x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
+    x.addEventListener("click",function(){ card.classList.remove("enter"); card.classList.add("leave"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 360); });
     card.appendChild(x);
 
     var header=document.createElement("div"); header.className="row-r";
@@ -246,14 +244,14 @@
 
     var body=document.createElement("div");
     var shortText=truncateWords(item.text, MAX_WORDS);
-    body.className="body "+scaleClass(shortText); body.textContent=shortText;
+    body.className="body "+scaleClassByWords(shortText); body.textContent=shortText;
 
     var brand=document.createElement("div"); brand.className="brand";
     brand.innerHTML = ''
       + '<span class="gmark" aria-label="Google">'
-      + '  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">'
+      + '  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">'
       + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.23 1.26-.93 2.33-1.98 3.04v2.52h3.2c1.87-1.72 2.95-4.25 2.95-7.27 0-.7-.06-1.37-.17-2.01z"></path>'
-      + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36ל-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22ז"></path>'
+      + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.89.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56A9.818 9.818 0 0 0 12.18 22z"></path>'
       + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82В7.64H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
       + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2c-3.78 0-7.01 2.17-8.78 5.64"></path>'
       + '  </svg>'
@@ -265,10 +263,10 @@
   }
 
   function renderPurchaseCard(p){
-    var card=document.createElement("div"); card.className="card fade-in";
+    var card=document.createElement("div"); card.className="card enter";
 
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
-    x.addEventListener("click",function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 350); });
+    x.addEventListener("click",function(){ card.classList.remove("enter"); card.classList.add("leave"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 360); });
     card.appendChild(x);
 
     /* ---------- TOP ---------- */
@@ -276,7 +274,6 @@
 
     var textCol=document.createElement("div"); textCol.className="ptext";
 
-    // time chip (top-left column, centered)
     var tTop=document.createElement("div"); tTop.className="ptime-top";
     tTop.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
                    + '  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>'
@@ -284,14 +281,12 @@
                    + '</svg>' + escapeHTML(timeAgo(p.purchased_at));
     textCol.appendChild(tTop);
 
-    // sentence
     var sentence=document.createElement("div"); sentence.className="psentence";
     var buyerFirst = firstName(p.buyer);
     sentence.innerHTML = '<strong class="buyer">'+escapeHTML(buyerFirst)+'</strong> רכש/ה '
                        + '<span class="prod">'+escapeHTML(p.product)+'</span>';
     textCol.appendChild(sentence);
 
-    // media (image + hot badge)
     var media=document.createElement("div"); media.className="pmedia";
     var frame=document.createElement("div"); frame.className="pframe";
     var imgEl;
@@ -318,7 +313,6 @@
     top.appendChild(media);
     card.appendChild(top);
 
-    // no footer/EVID anywhere
     return card;
   }
 
@@ -339,7 +333,9 @@
     var itm = items[idx % items.length]; idx++;
     var card = (itm.kind==="purchase") ? renderPurchaseCard(itm.data) : renderReviewCard(itm.data);
     wrap.innerHTML=""; wrap.appendChild(card);
-    setTimeout(function(){ card.classList.remove("fade-in"); card.classList.add("fade-out"); }, Math.max(0, SHOW_MS - 350));
+
+    var OUT_MS = 360; // leave animation length
+    setTimeout(function(){ card.classList.remove("enter"); card.classList.add("leave"); }, Math.max(0, SHOW_MS - OUT_MS));
     setTimeout(function(){ if(card && card.parentNode){ card.parentNode.removeChild(card); } }, SHOW_MS);
   }
   function start(){
