@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — Purchase layout unified (mobile = desktop), compact, NO EVID pill; MAX_WORDS=60; shrink: >26 small, >40 tiny */
+/*! both-controller v3.6.4 — Purchase layout unified (mobile = desktop), compact, NO EVID pill; MAX_WORDS=60; shrink by words: >26 small, >40 tiny */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -13,7 +13,7 @@
   var SHOW_MS   = Number((scriptEl && scriptEl.getAttribute("data-show-ms"))       || 15000);
   var GAP_MS    = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))        || 6000);
   var INIT_MS   = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
-  var MAX_WORDS = Number((scriptEl && scriptEl.getAttribute("data-max-words"))     || 60); // ← 60 words
+  var MAX_WORDS = Number((scriptEl && scriptEl.getAttribute("data-max-words"))     || 60); // ← 60 words default
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
   function log(){ if (DEBUG) { var a=["[both-controller v3.6.4]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
@@ -23,7 +23,7 @@
     return;
   }
 
-  /* ========== styles ========== */
+  /* ========== styles =========== */
   var style = document.createElement("style");
   style.textContent = ''
   + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
@@ -100,16 +100,31 @@
   /* ---- helpers ---- */
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
-  function escapeHTML(s){ return String(s||"").replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]);}); }
+  function escapeHTML(s){ return String(s||"").replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;"," >":"&gt;","\"":"&quot;","'":"&#39;"}[c]);}); }
   function firstName(s){ s=String(s||"").trim(); var parts=s.split(/\s+/); return parts[0]||s; }
   function truncateWords(s,n){ s=(s||"").replace(/\s+/g," ").trim(); var p=s?s.split(" "):[]; return p.length>n?p.slice(0,n).join(" ")+"…":s; }
-  function scaleClass(text){ // ← updated shrink thresholds
-    var t=(text||"").trim(), L=t.length;
-    if(L>40) return "tiny";   // > 40 chars → tiny
-    if(L>26) return "small";  // > 26 chars → small
+
+  // count words and assign size class based on word thresholds
+  function scaleClass(text){
+    var t=(text||"").replace(/\s+/g," ").trim();
+    if(!t) return "";
+    var words = t.split(" ").length;
+    if(words>40) return "tiny";   // > 40 words → tiny
+    if(words>26) return "small";  // > 26 words → small
     return "";
   }
-  function timeAgo(ts){ try{ var d=new Date(ts); var diff=Math.max(0,(Date.now()-d.getTime())/1000); var m=Math.floor(diff/60), h=Math.floor(m/60), d2=Math.floor(h/24); if(d2>0) return d2===1?"אתמול":"לפני "+d2+" ימים"; if(h>0) return "לפני "+h+" שעות"; if(m>0) return "לפני "+m+" דקות"; return "כרגע"; }catch(_){ return ""; } }
+
+  function timeAgo(ts){
+    try{
+      var d=new Date(ts);
+      var diff=Math.max(0,(Date.now()-d.getTime())/1000);
+      var m=Math.floor(diff/60), h=Math.floor(m/60), d2=Math.floor(h/24);
+      if(d2>0) return d2===1?"אתמול":"לפני "+d2+" ימים";
+      if(h>0) return "לפני "+h+" שעות";
+      if(m>0) return "לפני "+m+" דקות";
+      return "כרגע";
+    }catch(_){ return ""; }
+  }
 
   /* Avatar helpers */
   function renderMonogram(name){ var d=document.createElement("div"); d.className="avatar-fallback"; d.textContent=firstLetter(name); d.style.background=colorFromString(name); return d; }
@@ -304,7 +319,6 @@
     card.appendChild(top);
 
     // no footer/EVID anywhere
-
     return card;
   }
 
