@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — Purchase layout unified (mobile = desktop), compact, NO EVID pill */
+/*! both-controller v3.6.4 — Purchase layout unified (mobile = desktop), compact, NO EVID pill; MAX_WORDS=60; shrink: >26 small, >40 tiny */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -13,7 +13,7 @@
   var SHOW_MS   = Number((scriptEl && scriptEl.getAttribute("data-show-ms"))       || 15000);
   var GAP_MS    = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))        || 6000);
   var INIT_MS   = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
-  var MAX_WORDS = Number((scriptEl && scriptEl.getAttribute("data-max-words"))     || 20);
+  var MAX_WORDS = Number((scriptEl && scriptEl.getAttribute("data-max-words"))     || 60); // ← 60 words
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
   function log(){ if (DEBUG) { var a=["[both-controller v3.6.4]"]; for (var i=0;i<arguments.length;i++) a.push(arguments[i]); console.log.apply(console,a);} }
@@ -38,7 +38,7 @@
   + '.xbtn{position:absolute;top:10px;left:10px;appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
   + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;} .xbtn:active{transform:translateY(0);}'
 
-  /* -------- Reviews (unchanged) -------- */
+  /* -------- Reviews (unchanged structure) -------- */
   + '.row-r{display:grid;grid-template-columns:40px 1fr 24px;gap:12px;align-items:center;padding:12px 12px 8px;direction:rtl;}'
   + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#eef2f7;display:block;border:1px solid rgba(2,6,23,.06);}'
   + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;}'
@@ -75,7 +75,7 @@
   + '.pulse{animation:pulse 2.8s ease-in-out infinite}'
   + '@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}50%{box-shadow:0 0 0 8px rgba(249,115,22,.12)}}'
 
-  /* No footer/EVID anywhere (mobile & desktop) */
+  /* No footer/EVID anywhere */
   + '.p-foot{display:none !important;}'
 
   /* Mobile image size tweak */
@@ -103,7 +103,12 @@
   function escapeHTML(s){ return String(s||"").replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]);}); }
   function firstName(s){ s=String(s||"").trim(); var parts=s.split(/\s+/); return parts[0]||s; }
   function truncateWords(s,n){ s=(s||"").replace(/\s+/g," ").trim(); var p=s?s.split(" "):[]; return p.length>n?p.slice(0,n).join(" ")+"…":s; }
-  function scaleClass(text){ var t=(text||"").trim(), L=t.length; if(L>220) return "tiny"; if(L>140) return "small"; return ""; }
+  function scaleClass(text){ // ← updated shrink thresholds
+    var t=(text||"").trim(), L=t.length;
+    if(L>40) return "tiny";   // > 40 chars → tiny
+    if(L>26) return "small";  // > 26 chars → small
+    return "";
+  }
   function timeAgo(ts){ try{ var d=new Date(ts); var diff=Math.max(0,(Date.now()-d.getTime())/1000); var m=Math.floor(diff/60), h=Math.floor(m/60), d2=Math.floor(h/24); if(d2>0) return d2===1?"אתמול":"לפני "+d2+" ימים"; if(h>0) return "לפני "+h+" שעות"; if(m>0) return "לפני "+m+" דקות"; return "כרגע"; }catch(_){ return ""; } }
 
   /* Avatar helpers */
@@ -345,7 +350,7 @@
           return raw;
         });
       }).catch(function(err){
-        if(isJSD && i < JS_MIRRORS.length-1){
+        if(isJSD && i < ["https://cdn.jsdelivr.net","https://fastly.jsdelivr.net","https://gcore.jsdelivr.net"].length-1){
           i++; var next = ["https://cdn.jsdelivr.net","https://fastly.jsdelivr.net","https://gcore.jsdelivr.net"][i];
           try{ var a=new URL(u), m=new URL(next); a.protocol=m.protocol; a.host=m.host; var mirrored=a.toString(); return attempt(mirrored + (mirrored.indexOf("?")>-1?"&":"?") + "t="+Date.now()); }catch(_){ throw err; }
         }
