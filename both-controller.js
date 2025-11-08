@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — Assistant font desktop+mobile, mobile sticky bottom, mobile review char limit=30, smooth in/out, Google SVG fix */
+/*! both-controller v3.6.4 — Assistant everywhere, mobile review sticky-only, mobile review trim ~160 chars, smooth in/out, Google SVG fix */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -15,8 +15,8 @@
   var INIT_MS   = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
 
   /* limits */
-  var MAX_WORDS_DESKTOP = 60;   // desktop: limit by words (for reviews)
-  var MAX_CHARS_MOBILE  = 30;   // mobile: limit by characters (for reviews)
+  var MAX_WORDS_DESKTOP = 60;   // desktop: review text limited by words
+  var MAX_CHARS_MOBILE  = 160;  // mobile: review text limited by characters (~160)
 
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
@@ -33,15 +33,20 @@
   + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
   + ':host{all:initial;}'
 
-  /* wrapper (desktop default) */
-  + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;'
+  /* Enforce Assistant everywhere inside shadow root */
+  + ':host, :host *{'
   + '  font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial!important;'
-  + '  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}'
-  + '.wrap *{font-family:inherit!important;box-sizing:border-box;}'
+  + '  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;'
+  + '}'
+
+  /* Wrapper (desktop default) */
+  + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;}'
 
   /* Card */
-  + '.card{position:relative;width:370px;max-width:92vw;background:#fff;color:#0b1220;border-radius:18px;'
-  + '  box-shadow:0 16px 40px rgba(2,6,23,.18);border:1px solid rgba(2,6,23,.06);overflow:hidden;}'
+  + '.card{position:relative;width:370px;max-width:92vw;background:#fff;color:#0b1220;'
+  + '  border-radius:18px;box-shadow:0 16px 40px rgba(2,6,23,.18);border:1px solid rgba(2,6,23,.06);overflow:hidden;}'
+  + '.card.review-card{}'
+  + '.card.purchase-card{}'
 
   /* Close button */
   + '.xbtn{position:absolute;top:10px;left:10px;appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;'
@@ -65,7 +70,7 @@
   + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-  /* -------- Purchases (unchanged compact layout) -------- */
+  /* -------- Purchases (compact) -------- */
   + '.p-top{display:grid;grid-template-columns:1fr 168px;gap:12px;align-items:center;padding:13px 12px 6px;direction:ltr;}'
   + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:4px;align-items:stretch;direction:rtl;}'
   + '.ptime-top{display:flex;align-items:center;gap:6px;justify-content:center;font-size:12.5px;color:#1f2937;opacity:.92;text-align:right;direction:rtl;margin:0;}'
@@ -84,16 +89,16 @@
   + '@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}50%{box-shadow:0 0 0 8px rgba(249,115,22,.12)}}'
   + '.p-foot{display:none!important;}'
 
-  /* Smooth in/out */
+  /* Animations */
   + '.enter{animation:floatIn .42s cubic-bezier(.22,.61,.36,1) forwards;}'
   + '.leave{animation:floatOut .36s cubic-bezier(.22,.61,.36,1) forwards;}'
   + '@keyframes floatIn{0%{opacity:0;transform:translateY(10px) scale(.98);filter:blur(2px);}100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}}'
   + '@keyframes floatOut{0%{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}100%{opacity:0;transform:translateY(8px) scale(.985);filter:blur(1px);}}'
 
-  /* MOBILE: stick to bottom (no gap), full width */
+  /* MOBILE: make ONLY review cards sticky at bottom (purchase stays floating) */
   + '@media (max-width:480px){'
-  + '  .wrap{right:0;left:0;bottom:0;padding:0 0 env(safe-area-inset-bottom,0);}'
-  + '  .card{width:100%;max-width:none;border-radius:16px 16px 0 0;margin:0;}'
+  + '  .wrap.sticky-review{right:0;left:0;bottom:0;padding:0 0 env(safe-area-inset-bottom,0);}'
+  + '  .wrap.sticky-review .card.review-card{width:100%;max-width:none;border-radius:16px 16px 0 0;margin:0;}'
   + '  .row-r{padding:12px 10px 8px;}'
   + '  .p-top{grid-template-columns:1fr 144px;padding:13px 10px 6px;gap:10px;}'
   + '  .pframe{width:144px;height:104px;}'
@@ -117,20 +122,19 @@
   function escapeHTML(s){ return String(s||"").replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]);}); }
   function firstName(s){ s=String(s||"").trim(); var parts=s.split(/\s+/); return parts[0]||s; }
 
-  /* Truncation: MOBILE by characters, DESKTOP by words (reviews only) */
+  /* Truncation: MOBILE (chars ~160) | DESKTOP (words 60) — reviews only */
   function truncateForReview(text){
     var t=(text||"").replace(/\s+/g," ").trim();
-    if(IS_MOBILE){                       // characters on mobile
+    if(IS_MOBILE){
       var n = MAX_CHARS_MOBILE;
       return t.length>n ? t.slice(0,n).trim()+"…" : t;
-    }else{                               // words on desktop
+    } else {
       var words = t ? t.split(" ") : [];
       return words.length>MAX_WORDS_DESKTOP ? words.slice(0,MAX_WORDS_DESKTOP).join(" ")+"…" : t;
     }
   }
-  /* Scale: desktop by word count; mobile not needed (already short) */
   function scaleClassForReview(text){
-    if(IS_MOBILE) return "";
+    if(IS_MOBILE) return ""; // no need; we already keep it compact
     var w = String(text||"").trim().split(/\s+/).length;
     if(w>40) return "tiny";
     if(w>26) return "small";
@@ -237,7 +241,7 @@
 
   /* ---- renderers ---- */
   function renderReviewCard(item){
-    var card=document.createElement("div"); card.className="card enter";
+    var card=document.createElement("div"); card.className="card review-card enter";
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
     x.addEventListener("click",function(){ card.classList.remove("enter"); card.classList.add("leave"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 360); });
     card.appendChild(x);
@@ -270,7 +274,7 @@
   }
 
   function renderPurchaseCard(p){
-    var card=document.createElement("div"); card.className="card enter";
+    var card=document.createElement("div"); card.className="card purchase-card enter";
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
     x.addEventListener("click",function(){ card.classList.remove("enter"); card.classList.add("leave"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 360); });
     card.appendChild(x);
@@ -332,6 +336,10 @@
   function showNext(){
     if(!items.length) return;
     var itm = items[idx % items.length]; idx++;
+
+    // Toggle sticky only for review (mobile CSS targets .wrap.sticky-review)
+    if (itm.kind === "review") wrap.classList.add('sticky-review'); else wrap.classList.remove('sticky-review');
+
     var card = (itm.kind==="purchase") ? renderPurchaseCard(itm.data) : renderReviewCard(itm.data);
     wrap.innerHTML=""; wrap.appendChild(card);
 
