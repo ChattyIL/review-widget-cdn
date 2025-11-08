@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — Assistant everywhere, mobile review sticky-only, mobile review trim ~160 chars, smooth in/out, Google SVG fix */
+/*! both-controller v3.6.4 — Assistant enforced (desktop+mobile), review sticky (mobile), smooth anim, truncation rules */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -15,8 +15,8 @@
   var INIT_MS   = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
 
   /* limits */
-  var MAX_WORDS_DESKTOP = 60;   // desktop: review text limited by words
-  var MAX_CHARS_MOBILE  = 160;  // mobile: review text limited by characters (~160)
+  var MAX_WORDS_DESKTOP = 60;   // desktop reviews trim by words
+  var MAX_CHARS_MOBILE  = 160;  // mobile reviews trim by chars (~160)
 
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
@@ -33,9 +33,9 @@
   + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap");'
   + ':host{all:initial;}'
 
-  /* Enforce Assistant everywhere inside shadow root */
-  + ':host, :host *{'
-  + '  font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial!important;'
+  /* Enforce Assistant everywhere inside shadow root (desktop + mobile) */
+  + ':host, :host *, .wrap, .wrap *, .card, .card *{'
+  + '  font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,"Noto Sans Hebrew",Heebo,sans-serif!important;'
   + '  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;'
   + '}'
 
@@ -112,6 +112,8 @@
 
   var wrap = document.createElement("div");
   wrap.className = "wrap";
+  /* JS-level fallback to guarantee font inheritance on desktop too */
+  wrap.style.fontFamily = '"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,"Noto Sans Hebrew",Heebo,sans-serif';
   root.appendChild(wrap);
 
   /* ---- helpers ---- */
@@ -134,7 +136,7 @@
     }
   }
   function scaleClassForReview(text){
-    if(IS_MOBILE) return ""; // no need; we already keep it compact
+    if(IS_MOBILE) return "";
     var w = String(text||"").trim().split(/\s+/).length;
     if(w>40) return "tiny";
     if(w>26) return "small";
@@ -263,7 +265,7 @@
       + '  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">'
       + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.26 1.43-1.03 2.6-2.18 3.38l2.57 2.04C20.06 18.15 21.35 15.87 21.35 13c0-.64-.06-1.24-.17-1.9z"></path>'
       + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.9.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56C5.12 20.47 8.39 22 12.18 22z"></path>'
-      + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72l3.29-2.34z"></path>'
+      + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72ל"></path>'
       + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2C8.4 2 5.17 4.17 3.4 7.64l3.29 2.56C7.46 7.88 9.62 5.5 12.18 5.5z"></path>'
       + '  </svg>'
       + '</span>'
@@ -337,7 +339,7 @@
     if(!items.length) return;
     var itm = items[idx % items.length]; idx++;
 
-    // Toggle sticky only for review (mobile CSS targets .wrap.sticky-review)
+    // Sticky only for review (mobile CSS targets .wrap.sticky-review)
     if (itm.kind === "review") wrap.classList.add('sticky-review'); else wrap.classList.remove('sticky-review');
 
     var card = (itm.kind==="purchase") ? renderPurchaseCard(itm.data) : renderReviewCard(itm.data);
