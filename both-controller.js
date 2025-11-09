@@ -1,4 +1,4 @@
-/*! both-controller v3.6.4 — No-font-flash (Assistant only) + image prewarm (avatars/products) + prior layout/anim */
+/*! both-controller v3.6.4 — Assistant font: no flash (head stylesheet + load gate), image prewarm, sticky review on mobile */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -14,9 +14,9 @@
   var GAP_MS    = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))        || 6000);
   var INIT_MS   = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
 
-  /* limits */
-  var MAX_WORDS_DESKTOP = 60;   // desktop reviews trim by words
-  var MAX_CHARS_MOBILE  = 160;  // mobile reviews trim by chars (~160)
+  // trimming (unchanged from last version)
+  var MAX_WORDS_DESKTOP = 60;   // review text by words on desktop
+  var MAX_CHARS_MOBILE  = 160;  // review text by characters on mobile
 
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
@@ -27,55 +27,79 @@
     return;
   }
 
-  /* --------- Head helpers: preconnect/preload Assistant so there is NO fallback flash ---------- */
-  function injectFontLinks(){
-    try{
-      if (!document.getElementById('asst-preconnect-1')) {
-        var l1=document.createElement('link'); l1.id='asst-preconnect-1';
-        l1.rel='preconnect'; l1.href='https://fonts.googleapis.com';
-        document.head.appendChild(l1);
-      }
-      if (!document.getElementById('asst-preconnect-2')) {
-        var l2=document.createElement('link'); l2.id='asst-preconnect-2';
-        l2.rel='preconnect'; l2.href='https://fonts.gstatic.com'; l2.crossOrigin='anonymous';
-        document.head.appendChild(l2);
-      }
-    }catch(_){}
-  }
-  injectFontLinks();
+  /* -----------------------------------------------------------
+     Assistant font: load from HEAD (no @import in shadow)
+     Wait for stylesheet + font faces before revealing widget.
+  ------------------------------------------------------------ */
+  var ASSIST_HREF = 'https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=block';
 
-  /* ========== styles ========== */
+  function ensureAssistantInHead(){
+    try{
+      // preconnects help on first paint
+      if (!document.getElementById('asst-preconnect-goog')) {
+        var pc1=document.createElement('link'); pc1.id='asst-preconnect-goog';
+        pc1.rel='preconnect'; pc1.href='https://fonts.googleapis.com';
+        document.head.appendChild(pc1);
+      }
+      if (!document.getElementById('asst-preconnect-gstatic')) {
+        var pc2=document.createElement('link'); pc2.id='asst-preconnect-gstatic';
+        pc2.rel='preconnect'; pc2.href='https://fonts.gstatic.com'; pc2.crossOrigin='anonymous';
+        document.head.appendChild(pc2);
+      }
+      // stylesheet in head (not shadow)
+      var link = document.getElementById('asst-font-css');
+      if (!link) {
+        link = document.createElement('link');
+        link.id = 'asst-font-css';
+        link.rel = 'stylesheet';
+        link.href = ASSIST_HREF;
+        document.head.appendChild(link);
+      }
+      // wait for the stylesheet + font faces
+      return new Promise(function(resolve){
+        var done = false;
+        function finish(){ if(done) return; done=true; 
+          try{
+            // explicitly load weights we use
+            var p = document.fonts ? Promise.all([
+              document.fonts.load('400 14px "Assistant"'),
+              document.fonts.load('600 14px "Assistant"'),
+              document.fonts.load('700 14px "Assistant"'),
+              document.fonts.ready
+            ]) : Promise.resolve();
+            p.then(resolve).catch(resolve);
+          }catch(_){ resolve(); }
+        }
+        if (link.sheet) { finish(); }
+        else {
+          link.addEventListener('load', finish, {once:true});
+          link.addEventListener('error', finish, {once:true}); // still show if blocked
+        }
+        // safety timeout (if load event never fires)
+        setTimeout(finish, 2500);
+      });
+    }catch(_){ return Promise.resolve(); }
+  }
+
+  /* ========== styles inside shadow (no @import here) ========== */
   var style = document.createElement("style");
   style.textContent = ''
-  /* Use display=block to prevent Google Fonts from swapping to fallback */
-  + '@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=block");'
   + ':host{all:initial;}'
-
-  /* Enforce Assistant everywhere (desktop + mobile) */
   + ':host, :host *, .wrap, .wrap *, .card, .card *{'
   + '  font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,"Noto Sans Hebrew",Heebo,sans-serif!important;'
   + '  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;'
   + '}'
 
-  /* Hide until font is ready (no fallback flash) */
-  + '.wrap.font-wait{opacity:0;pointer-events:none;}'
-  + '.wrap.font-ready{opacity:1;pointer-events:auto;transition:opacity .15s ease;}'
-
-  /* Wrapper (desktop default) */
-  + '.wrap{position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;}'
+  /* hide until Assistant is ready */
+  + '.wrap{visibility:hidden;opacity:0;transition:opacity .15s ease;position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;}'
+  + '.wrap.ready{visibility:visible;opacity:1;}'
 
   /* Card */
-  + '.card{position:relative;width:370px;max-width:92vw;background:#fff;color:#0b1220;'
-  + '  border-radius:18px;box-shadow:0 16px 40px rgba(2,6,23,.18);border:1px solid rgba(2,6,23,.06);overflow:hidden;}'
-  + '.card.review-card{}'
-  + '.card.purchase-card{}'
-
-  /* Close button */
-  + '.xbtn{position:absolute;top:10px;left:10px;appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;'
-  + '  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
+  + '.card{position:relative;width:370px;max-width:92vw;background:#fff;color:#0b1220;border-radius:18px;box-shadow:0 16px 40px rgba(2,6,23,.18);border:1px solid rgba(2,6,23,.06);overflow:hidden;}'
+  + '.xbtn{position:absolute;top:10px;left:10px;appearance:none;border:0;background:#eef2f7;color:#111827;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.9;transition:transform .15s ease,filter .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.06) inset;}'
   + '.xbtn:hover{filter:brightness(.96);transform:translateY(-1px);opacity:1;} .xbtn:active{transform:translateY(0);}'
 
-  /* -------- Reviews -------- */
+  /* Reviews */
   + '.row-r{display:grid;grid-template-columns:40px 1fr 24px;gap:12px;align-items:center;padding:12px 12px 8px;direction:rtl;}'
   + '.avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#eef2f7;display:block;border:1px solid rgba(2,6,23,.06);}'
   + '.avatar-fallback{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;width:40px;height:40px;border-radius:50%;}'
@@ -92,7 +116,7 @@
   + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-  /* -------- Purchases (compact) -------- */
+  /* Purchases (compact version you liked) */
   + '.p-top{display:grid;grid-template-columns:1fr 168px;gap:12px;align-items:center;padding:13px 12px 6px;direction:ltr;}'
   + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:4px;align-items:stretch;direction:rtl;}'
   + '.ptime-top{display:flex;align-items:center;gap:6px;justify-content:center;font-size:12.5px;color:#1f2937;opacity:.92;text-align:right;direction:rtl;margin:0;}'
@@ -111,13 +135,13 @@
   + '@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}50%{box-shadow:0 0 0 8px rgba(249,115,22,.12)}}'
   + '.p-foot{display:none!important;}'
 
-  /* Animations */
+  /* Entry/exit */
   + '.enter{animation:floatIn .42s cubic-bezier(.22,.61,.36,1) forwards;}'
   + '.leave{animation:floatOut .36s cubic-bezier(.22,.61,.36,1) forwards;}'
   + '@keyframes floatIn{0%{opacity:0;transform:translateY(10px) scale(.98);filter:blur(2px);}100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}}'
   + '@keyframes floatOut{0%{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}100%{opacity:0;transform:translateY(8px) scale(.985);filter:blur(1px);}}'
 
-  /* MOBILE: only review cards stick to bottom (purchase stays floating) */
+  /* Mobile: reviews stick to bottom (purchase stays floating) */
   + '@media (max-width:480px){'
   + '  .wrap.sticky-review{right:0;left:0;bottom:0;padding:0 0 env(safe-area-inset-bottom,0);}'
   + '  .wrap.sticky-review .card.review-card{width:100%;max-width:none;border-radius:16px 16px 0 0;margin:0;}'
@@ -130,21 +154,10 @@
   ;
   root.appendChild(style);
 
-  /* Wrapper */
+  /* Wrapper (hidden until Assistant ready) */
   var wrap = document.createElement("div");
-  wrap.className = "wrap font-wait";
-  wrap.style.fontFamily = '"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,"Noto Sans Hebrew",Heebo,sans-serif';
+  wrap.className = "wrap";
   root.appendChild(wrap);
-
-  /* Wait for the Assistant font — no fallback flash */
-  function awaitAssistant(){
-    try{
-      var p1 = document.fonts ? document.fonts.load('400 14px "Assistant"') : Promise.resolve();
-      var p2 = document.fonts ? document.fonts.load('700 14px "Assistant"') : Promise.resolve();
-      var p3 = document.fonts ? document.fonts.ready : Promise.resolve();
-      return Promise.all([p1,p2,p3]).then(function(){ wrap.classList.remove('font-wait'); wrap.className += ' font-ready'; });
-    }catch(_){ wrap.classList.remove('font-wait'); wrap.className += ' font-ready'; return Promise.resolve(); }
-  }
 
   /* ---- helpers ---- */
   var IS_MOBILE = (typeof window !== "undefined") && window.matchMedia && window.matchMedia('(max-width:480px)').matches;
@@ -171,7 +184,6 @@
     if(w>26) return "small";
     return "";
   }
-
   function timeAgo(ts){
     try{ var d=new Date(ts);
       var diff=Math.max(0,(Date.now()-d.getTime())/1000);
@@ -183,7 +195,7 @@
     }catch(_){ return ""; }
   }
 
-  /* Image preloader/cache so avatars/products are ready before show */
+  /* Image preloader so avatars/products are ready */
   var IMG_CACHE = new Map();
   function warmImage(url){
     if(!url) return Promise.resolve();
@@ -207,7 +219,7 @@
     return Promise.resolve();
   }
 
-  /* Avatars (keep monogram as safety) */
+  /* Avatars */
   function renderMonogram(name){ var d=document.createElement("div"); d.className="avatar-fallback"; d.textContent=firstLetter(name); d.style.background=colorFromString(name); return d; }
   function renderAvatarPreloaded(name, url){
     var shell = renderMonogram(name);
@@ -220,7 +232,7 @@
     return shell;
   }
 
-  /* ---- parsers ---- */
+  /* parsers */
   function getPhotoUrl(o){
     if(!o||typeof o!=="object") return "";
     var k=Object.keys(o); for(var i=0;i<k.length;i++){ var n=k[i], ln=n.toLowerCase();
@@ -265,7 +277,7 @@
     return arr;
   }
 
-  /* ---- fetchers ---- */
+  /* fetchers */
   var JS_MIRRORS = ["https://cdn.jsdelivr.net","https://fastly.jsdelivr.net","https://gcore.jsdelivr.net"];
   function rewriteToMirror(u, mirror){ try { var a=new URL(u), m=new URL(mirror); a.protocol=m.protocol; a.host=m.host; return a.toString(); } catch(_){ return u; } }
   function fetchTextWithMirrors(u){
@@ -291,7 +303,7 @@
   }
   function fetchJSON(url){ return fetchTextWithMirrors(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } }); }
 
-  /* ---- renderers ---- */
+  /* renderers */
   function renderReviewCard(item){
     var card=document.createElement("div"); card.className="card review-card enter";
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
@@ -315,7 +327,7 @@
       + '  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">'
       + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.26 1.43-1.03 2.6-2.18 3.38l2.57 2.04C20.06 18.15 21.35 15.87 21.35 13c0-.64-.06-1.24-.17-1.9z"></path>'
       + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.9.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56C5.12 20.47 8.39 22 12.18 22z"></path>'
-      + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72ל"></path>'
+      + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
       + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2C8.4 2 5.17 4.17 3.4 7.64l3.29 2.56C7.46 7.88 9.62 5.5 12.18 5.5z"></path>'
       + '  </svg>'
       + '</span>'
@@ -373,7 +385,7 @@
     return card;
   }
 
-  /* ---- rotation ---- */
+  /* rotation */
   function interleave(reviews, purchases){
     var out=[], i=0, j=0;
     while(i<reviews.length || j<purchases.length){
@@ -391,7 +403,7 @@
 
     if (itm.kind === "review") wrap.classList.add('sticky-review'); else wrap.classList.remove('sticky-review');
 
-    /* Ensure image for this card is ready before showing (instant avatar/product) */
+    // ensure current image is ready before revealing this card
     warmForItem(itm).then(function(){
       var card = (itm.kind==="purchase") ? renderPurchaseCard(itm.data) : renderReviewCard(itm.data);
       wrap.innerHTML=""; wrap.appendChild(card);
@@ -411,20 +423,21 @@
     else { showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS); }
   }
 
-  /* ---- data loading ---- */
+  /* load data, warm images, wait for Assistant, then start */
   function loadAll(){
     var p1 = REVIEWS_EP ? fetchJSON(REVIEWS_EP).then(function(d){ var a=normalizeArray(d,"review"); log("reviews:", a.length); return a; }).catch(function(e){ console.warn("reviews fetch err:", e); return []; }) : Promise.resolve([]);
     var p2 = PURCHASES_EP ? fetchJSON(PURCHASES_EP).then(function(d){ var a=normalizeArray(d,"purchase"); log("purchases:", a.length); return a; }).catch(function(e){ console.warn("purchases fetch err:", e); return []; }) : Promise.resolve([]);
     Promise.all([p1,p2]).then(function(r){
       var rev = r[0]||[], pur = r[1]||[];
-      /* Warm all images up-front so they are instant when cards rotate */
       rev.forEach(function(v){ if(v.profilePhotoUrl) warmImage(v.profilePhotoUrl); });
       pur.forEach(function(v){ if(v.image) warmImage(v.image); });
-
       items = interleave(rev, pur);
       log("total items:", items.length);
 
-      awaitAssistant().then(start);
+      ensureAssistantInHead().then(function(){
+        wrap.classList.add('ready'); // reveal only after font is guaranteed available
+        start();
+      });
     })
     .catch(function(e){
       root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">Widget error: '+ String(e && e.message || e) +'</div>';
