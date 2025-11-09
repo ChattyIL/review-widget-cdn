@@ -1,5 +1,5 @@
 /*! both-controller v3.6.4 — Assistant no-FOUT, image prewarm, sticky review (mobile),
-    smooth animations, Google icon safe, and PERSISTED rotation across pages. */
+    smooth animations, Google icon safe, and PERSISTED rotation across pages (fixed gap resume). */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -325,8 +325,18 @@
       return JSON.parse(raw);
     } catch(_){ return null; }
   }
+  // NEW: update index but KEEP previous shownAt (so we don’t turn a gap into a fresh show)
+  function updateIndexOnly(newIdx, sig){
+    try{
+      var st = restoreState();
+      if(!st){ return; }
+      st.idx = newIdx;
+      if (sig) st.sig = sig;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
+    }catch(_){}
+  }
 
-  /* ---------- interleave (MISSING BEFORE) ---------- */
+  /* ---------- interleave ---------- */
   function interleave(reviews, purchases){
     var out=[], i=0, j=0;
     while(i<reviews.length || j<purchases.length){
@@ -436,7 +446,7 @@
       wrap.innerHTML=""; 
       wrap.appendChild(card);
 
-      // persist
+      // persist "start of show" timestamp and index
       saveState(shownIndex, itemsSig);
 
       var showFor = Math.max(300, Number(overrideShowMs||SHOW_MS));
@@ -506,6 +516,7 @@
           var elapsedInCycle = elapsed % cycle;
 
           if (elapsedInCycle < SHOW_MS){
+            // still in "show" window → resume that card until it finishes
             idx = (Number(state.idx||0) + step) % items.length;
             var remainingShow = SHOW_MS - elapsedInCycle;
 
@@ -516,6 +527,7 @@
             }, remainingShow + GAP_MS);
 
           } else {
+            // in the gap → next card after remaining gap
             idx = (Number(state.idx||0) + step + 1) % items.length;
             var remainingGap = cycle - elapsedInCycle;
             startFrom(remainingGap);
@@ -532,12 +544,12 @@
     });
   }
 
-  // keep a final checkpoint on unload
+  // Fixed: only update index on unload; keep original shownAt intact
   window.addEventListener('beforeunload', function(){
     try {
       if (!items.length) return;
       var lastShown = (idx - 1 + items.length*2) % (items.length||1);
-      saveState(lastShown, itemsSig);
+      updateIndexOnly(lastShown, itemsSig);
     } catch(_) {}
   });
 
