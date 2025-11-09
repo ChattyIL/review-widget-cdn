@@ -16,8 +16,8 @@
   var INIT_MS   = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
 
   // review text trimming
-  var MAX_WORDS_DESKTOP = 60;   // review text by words on desktop
-  var MAX_CHARS_MOBILE  = 160;  // review text by characters on mobile
+  var MAX_WORDS_DESKTOP = 60;   // desktop: trim by words
+  var MAX_CHARS_MOBILE  = 160;  // mobile: trim by chars
 
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
@@ -156,7 +156,7 @@
 
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
-  function escapeHTML(s){ return String(s||"").replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]);}); }
+  function escapeHTML(s){ return String(s||"").replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;","&gt;":">","\"":"&quot;","'":"&#39;"}[c]);}); }
   function firstName(s){ s=String(s||"").trim(); var parts=s.split(/\s+/); return parts[0]||s; }
 
   function truncateForReview(text){
@@ -185,6 +185,18 @@
       if(m>0) return "לפני "+m+" דקות";
       return "כרגע";
     }catch(_){ return ""; }
+  }
+
+  /* Avatar helpers */
+  function renderMonogram(name){ var d=document.createElement("div"); d.className="avatar-fallback"; d.textContent=firstLetter(name); d.style.background=colorFromString(name); return d; }
+  function renderAvatarPreloaded(name, url){
+    var shell = renderMonogram(name);
+    if(url){
+      var img = new Image(); img.width=40; img.height=40; img.decoding="async"; img.loading="eager";
+      img.onload=function(){ var tag=document.createElement("img"); tag.className="avatar"; tag.alt=""; tag.width=40; tag.height=40; tag.decoding="async"; tag.loading="eager"; tag.src=url; shell.replaceWith(tag); };
+      img.onerror=function(){}; img.src=url;
+    }
+    return shell;
   }
 
   /* Image preloader */
@@ -314,6 +326,16 @@
     } catch(_){ return null; }
   }
 
+  /* ---------- interleave (MISSING BEFORE) ---------- */
+  function interleave(reviews, purchases){
+    var out=[], i=0, j=0;
+    while(i<reviews.length || j<purchases.length){
+      if(i<reviews.length){ out.push({kind:"review", data:reviews[i++]}); }
+      if(j<purchases.length){ out.push({kind:"purchase", data:purchases[j++]}); }
+    }
+    return out;
+  }
+
   /* ---- renderers ---- */
   function renderReviewCard(item){
     var card=document.createElement("div"); card.className="card review-card enter";
@@ -414,7 +436,7 @@
       wrap.innerHTML=""; 
       wrap.appendChild(card);
 
-      // Save position for next page
+      // persist
       saveState(shownIndex, itemsSig);
 
       var showFor = Math.max(300, Number(overrideShowMs||SHOW_MS));
@@ -487,22 +509,18 @@
             idx = (Number(state.idx||0) + step) % items.length;
             var remainingShow = SHOW_MS - elapsedInCycle;
 
-            // show current item for the remaining time
             showNext(remainingShow);
 
-            // after remaining show + gap start normal loop
             preTimer = setTimeout(function(){
               startFrom(0);
             }, remainingShow + GAP_MS);
 
           } else {
-            // we are in gap -> start next item after remaining gap
             idx = (Number(state.idx||0) + step + 1) % items.length;
             var remainingGap = cycle - elapsedInCycle;
             startFrom(remainingGap);
           }
         } else {
-          // no valid state -> start from init delay or now
           if (INIT_MS > 0) setTimeout(function(){ startFrom(0); }, INIT_MS);
           else startFrom(0);
         }
