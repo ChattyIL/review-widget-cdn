@@ -1,4 +1,5 @@
-/*! both-controller v3.6.4 — Assistant font: no flash (head stylesheet + load gate), image prewarm, sticky review on mobile */
+/*! both-controller v3.6.4 — Assistant no-FOUT, image prewarm, sticky review (mobile),
+    smooth animations, Google icon safe, and PERSISTED rotation across pages. */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -14,7 +15,7 @@
   var GAP_MS    = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))        || 6000);
   var INIT_MS   = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
 
-  // trimming (unchanged from last version)
+  // review text trimming
   var MAX_WORDS_DESKTOP = 60;   // review text by words on desktop
   var MAX_CHARS_MOBILE  = 160;  // review text by characters on mobile
 
@@ -27,15 +28,12 @@
     return;
   }
 
-  /* -----------------------------------------------------------
-     Assistant font: load from HEAD (no @import in shadow)
-     Wait for stylesheet + font faces before revealing widget.
-  ------------------------------------------------------------ */
+  /* =========================
+     Assistant font: no FOUT
+     ========================= */
   var ASSIST_HREF = 'https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=block';
-
   function ensureAssistantInHead(){
     try{
-      // preconnects help on first paint
       if (!document.getElementById('asst-preconnect-goog')) {
         var pc1=document.createElement('link'); pc1.id='asst-preconnect-goog';
         pc1.rel='preconnect'; pc1.href='https://fonts.googleapis.com';
@@ -46,7 +44,6 @@
         pc2.rel='preconnect'; pc2.href='https://fonts.gstatic.com'; pc2.crossOrigin='anonymous';
         document.head.appendChild(pc2);
       }
-      // stylesheet in head (not shadow)
       var link = document.getElementById('asst-font-css');
       if (!link) {
         link = document.createElement('link');
@@ -55,12 +52,10 @@
         link.href = ASSIST_HREF;
         document.head.appendChild(link);
       }
-      // wait for the stylesheet + font faces
       return new Promise(function(resolve){
-        var done = false;
-        function finish(){ if(done) return; done=true; 
+        var done=false;
+        function finish(){ if(done) return; done=true;
           try{
-            // explicitly load weights we use
             var p = document.fonts ? Promise.all([
               document.fonts.load('400 14px "Assistant"'),
               document.fonts.load('600 14px "Assistant"'),
@@ -70,18 +65,17 @@
             p.then(resolve).catch(resolve);
           }catch(_){ resolve(); }
         }
-        if (link.sheet) { finish(); }
+        if (link.sheet) finish();
         else {
           link.addEventListener('load', finish, {once:true});
-          link.addEventListener('error', finish, {once:true}); // still show if blocked
+          link.addEventListener('error', finish, {once:true});
         }
-        // safety timeout (if load event never fires)
         setTimeout(finish, 2500);
       });
     }catch(_){ return Promise.resolve(); }
   }
 
-  /* ========== styles inside shadow (no @import here) ========== */
+  /* ========== styles (no @import here) ========== */
   var style = document.createElement("style");
   style.textContent = ''
   + ':host{all:initial;}'
@@ -89,8 +83,6 @@
   + '  font-family:"Assistant",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,"Noto Sans Hebrew",Heebo,sans-serif!important;'
   + '  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;'
   + '}'
-
-  /* hide until Assistant is ready */
   + '.wrap{visibility:hidden;opacity:0;transition:opacity .15s ease;position:fixed;right:16px;left:auto;bottom:16px;z-index:2147483000;}'
   + '.wrap.ready{visibility:visible;opacity:1;}'
 
@@ -116,7 +108,7 @@
   + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-  /* Purchases (compact version you liked) */
+  /* Purchases (compact) */
   + '.p-top{display:grid;grid-template-columns:1fr 168px;gap:12px;align-items:center;padding:13px 12px 6px;direction:ltr;}'
   + '.ptext{grid-column:1;display:flex;flex-direction:column;gap:4px;align-items:stretch;direction:rtl;}'
   + '.ptime-top{display:flex;align-items:center;gap:6px;justify-content:center;font-size:12.5px;color:#1f2937;opacity:.92;text-align:right;direction:rtl;margin:0;}'
@@ -135,13 +127,13 @@
   + '@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0)}50%{box-shadow:0 0 0 8px rgba(249,115,22,.12)}}'
   + '.p-foot{display:none!important;}'
 
-  /* Entry/exit */
+  /* Animations */
   + '.enter{animation:floatIn .42s cubic-bezier(.22,.61,.36,1) forwards;}'
   + '.leave{animation:floatOut .36s cubic-bezier(.22,.61,.36,1) forwards;}'
   + '@keyframes floatIn{0%{opacity:0;transform:translateY(10px) scale(.98);filter:blur(2px);}100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}}'
   + '@keyframes floatOut{0%{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}100%{opacity:0;transform:translateY(8px) scale(.985);filter:blur(1px);}}'
 
-  /* Mobile: reviews stick to bottom (purchase stays floating) */
+  /* Mobile: reviews stick to bottom, purchases float */
   + '@media (max-width:480px){'
   + '  .wrap.sticky-review{right:0;left:0;bottom:0;padding:0 0 env(safe-area-inset-bottom,0);}'
   + '  .wrap.sticky-review .card.review-card{width:100%;max-width:none;border-radius:16px 16px 0 0;margin:0;}'
@@ -154,7 +146,7 @@
   ;
   root.appendChild(style);
 
-  /* Wrapper (hidden until Assistant ready) */
+  /* wrapper (revealed after font is ready) */
   var wrap = document.createElement("div");
   wrap.className = "wrap";
   root.appendChild(wrap);
@@ -195,7 +187,7 @@
     }catch(_){ return ""; }
   }
 
-  /* Image preloader so avatars/products are ready */
+  /* Image preloader */
   var IMG_CACHE = new Map();
   function warmImage(url){
     if(!url) return Promise.resolve();
@@ -219,20 +211,7 @@
     return Promise.resolve();
   }
 
-  /* Avatars */
-  function renderMonogram(name){ var d=document.createElement("div"); d.className="avatar-fallback"; d.textContent=firstLetter(name); d.style.background=colorFromString(name); return d; }
-  function renderAvatarPreloaded(name, url){
-    var shell = renderMonogram(name);
-    if(url){
-      var img = new Image(); img.width=40; img.height=40; img.decoding="async"; img.loading="eager";
-      img.onload=function(){ var tag=document.createElement("img"); tag.className="avatar"; tag.alt=""; tag.width=40; tag.height=40; tag.decoding="async"; tag.loading="eager"; tag.src=url; shell.replaceWith(tag); };
-      img.onerror=function(){};
-      img.src=url;
-    }
-    return shell;
-  }
-
-  /* parsers */
+  /* ---- robust parsers ---- */
   function getPhotoUrl(o){
     if(!o||typeof o!=="object") return "";
     var k=Object.keys(o); for(var i=0;i<k.length;i++){ var n=k[i], ln=n.toLowerCase();
@@ -277,7 +256,7 @@
     return arr;
   }
 
-  /* fetchers */
+  /* fetchers with mirror failover */
   var JS_MIRRORS = ["https://cdn.jsdelivr.net","https://fastly.jsdelivr.net","https://gcore.jsdelivr.net"];
   function rewriteToMirror(u, mirror){ try { var a=new URL(u), m=new URL(mirror); a.protocol=m.protocol; a.host=m.host; return a.toString(); } catch(_){ return u; } }
   function fetchTextWithMirrors(u){
@@ -303,7 +282,39 @@
   }
   function fetchJSON(url){ return fetchTextWithMirrors(url).then(function(raw){ try{ return JSON.parse(raw); }catch(_){ return { items: [] }; } }); }
 
-  /* renderers */
+  /* ---------- persistence (keep position across pages) ---------- */
+  var STORAGE_KEY = 'evid:widget-state:v1';
+  var itemsSig = "0_0";
+
+  function itemsSignature(arr){
+    try {
+      var s = "";
+      for (var i=0; i<Math.min(10, arr.length); i++){
+        var it = arr[i];
+        if (!it || !it.data) continue;
+        s += (it.kind||"") + ":" +
+             (it.data.authorName||it.data.buyer||"") + "|" +
+             (it.data.text||it.data.product||"");
+      }
+      var h=0; for(var j=0;j<s.length;j++) h=(h*31 + s.charCodeAt(j))>>>0;
+      return h + "_" + arr.length;
+    } catch(_){ return "0_0"; }
+  }
+  function saveState(idxShown, sig){
+    try {
+      var st = { idx: idxShown, shownAt: Date.now(), sig: sig, show: SHOW_MS, gap: GAP_MS };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
+    } catch(_) {}
+  }
+  function restoreState(){
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return null;
+      return JSON.parse(raw);
+    } catch(_){ return null; }
+  }
+
+  /* ---- renderers ---- */
   function renderReviewCard(item){
     var card=document.createElement("div"); card.className="card review-card enter";
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
@@ -385,58 +396,116 @@
     return card;
   }
 
-  /* rotation */
-  function interleave(reviews, purchases){
-    var out=[], i=0, j=0;
-    while(i<reviews.length || j<purchases.length){
-      if(i<reviews.length){ out.push({kind:"review", data:reviews[i++]}); }
-      if(j<purchases.length){ out.push({kind:"purchase", data:purchases[j++]}); }
-    }
-    return out;
-  }
+  /* ---- rotation with persistence ---- */
+  var items=[], idx=0, loop=null, preTimer=null;
 
-  var items=[], idx=0, loop=null;
-
-  function showNext(){
+  function showNext(overrideShowMs){
     if(!items.length) return;
-    var itm = items[idx % items.length]; idx++;
 
+    var itm = items[idx % items.length];
+    var shownIndex = idx % items.length; // about to show this one
+    idx++;
+
+    // sticky review on mobile (purchases not sticky)
     if (itm.kind === "review") wrap.classList.add('sticky-review'); else wrap.classList.remove('sticky-review');
 
-    // ensure current image is ready before revealing this card
     warmForItem(itm).then(function(){
       var card = (itm.kind==="purchase") ? renderPurchaseCard(itm.data) : renderReviewCard(itm.data);
-      wrap.innerHTML=""; wrap.appendChild(card);
+      wrap.innerHTML=""; 
+      wrap.appendChild(card);
 
-      var OUT_MS = 360;
-      setTimeout(function(){ card.classList.remove("enter"); card.classList.add("leave"); }, Math.max(0, SHOW_MS - OUT_MS));
-      setTimeout(function(){ if(card && card.parentNode){ card.parentNode.removeChild(card); } }, SHOW_MS);
+      // Save position for next page
+      saveState(shownIndex, itemsSig);
+
+      var showFor = Math.max(300, Number(overrideShowMs||SHOW_MS));
+      var fadeOutMs = Math.max(0, showFor - 360);
+
+      setTimeout(function(){ 
+        card.classList.remove("enter"); 
+        card.classList.add("leave"); 
+      }, fadeOutMs);
+
+      setTimeout(function(){ 
+        if(card && card.parentNode){ card.parentNode.removeChild(card); } 
+      }, showFor);
     });
   }
-  function start(){
+
+  function startFrom(beginDelayMs){
     if(loop) clearInterval(loop);
-    if(!items.length){
-      root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">No items to display.</div>';
-      return;
+    if(preTimer) clearTimeout(preTimer);
+
+    var cycle = SHOW_MS + GAP_MS;
+
+    function beginInterval(){
+      showNext();
+      loop = setInterval(showNext, cycle);
     }
-    if (INIT_MS > 0) { setTimeout(function(){ showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS); }, INIT_MS); }
-    else { showNext(); loop=setInterval(showNext, SHOW_MS + GAP_MS); }
+
+    if (beginDelayMs && beginDelayMs > 0){
+      preTimer = setTimeout(beginInterval, beginDelayMs);
+    } else {
+      beginInterval();
+    }
   }
 
-  /* load data, warm images, wait for Assistant, then start */
+  /* ---- data loading ---- */
   function loadAll(){
     var p1 = REVIEWS_EP ? fetchJSON(REVIEWS_EP).then(function(d){ var a=normalizeArray(d,"review"); log("reviews:", a.length); return a; }).catch(function(e){ console.warn("reviews fetch err:", e); return []; }) : Promise.resolve([]);
     var p2 = PURCHASES_EP ? fetchJSON(PURCHASES_EP).then(function(d){ var a=normalizeArray(d,"purchase"); log("purchases:", a.length); return a; }).catch(function(e){ console.warn("purchases fetch err:", e); return []; }) : Promise.resolve([]);
+
     Promise.all([p1,p2]).then(function(r){
       var rev = r[0]||[], pur = r[1]||[];
+
+      // prewarm images early
       rev.forEach(function(v){ if(v.profilePhotoUrl) warmImage(v.profilePhotoUrl); });
       pur.forEach(function(v){ if(v.image) warmImage(v.image); });
+
+      // interleave and sign
       items = interleave(rev, pur);
+      itemsSig = itemsSignature(items);
       log("total items:", items.length);
 
+      if(!items.length){
+        root.innerHTML = '<div style="font-family: system-ui; color:#c00; background:#fff3f3; padding:12px; border:1px solid #f7caca; border-radius:8px">No items to display.</div>';
+        return;
+      }
+
       ensureAssistantInHead().then(function(){
-        wrap.classList.add('ready'); // reveal only after font is guaranteed available
-        start();
+        wrap.classList.add('ready'); // reveal only after Assistant is ready
+
+        var state = restoreState();
+        var cycle = SHOW_MS + GAP_MS;
+
+        if (state && state.sig === itemsSig) {
+          var now = Date.now();
+          var elapsed = Math.max(0, now - Number(state.shownAt||0));
+          var step = Math.floor(elapsed / cycle);
+          var elapsedInCycle = elapsed % cycle;
+
+          if (elapsedInCycle < SHOW_MS){
+            idx = (Number(state.idx||0) + step) % items.length;
+            var remainingShow = SHOW_MS - elapsedInCycle;
+
+            // show current item for the remaining time
+            showNext(remainingShow);
+
+            // after remaining show + gap start normal loop
+            preTimer = setTimeout(function(){
+              startFrom(0);
+            }, remainingShow + GAP_MS);
+
+          } else {
+            // we are in gap -> start next item after remaining gap
+            idx = (Number(state.idx||0) + step + 1) % items.length;
+            var remainingGap = cycle - elapsedInCycle;
+            startFrom(remainingGap);
+          }
+        } else {
+          // no valid state -> start from init delay or now
+          if (INIT_MS > 0) setTimeout(function(){ startFrom(0); }, INIT_MS);
+          else startFrom(0);
+        }
       });
     })
     .catch(function(e){
@@ -445,5 +514,15 @@
     });
   }
 
+  // keep a final checkpoint on unload
+  window.addEventListener('beforeunload', function(){
+    try {
+      if (!items.length) return;
+      var lastShown = (idx - 1 + items.length*2) % (items.length||1);
+      saveState(lastShown, itemsSig);
+    } catch(_) {}
+  });
+
+  /* ---- go ---- */
   loadAll();
 })();
