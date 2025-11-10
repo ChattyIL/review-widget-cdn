@@ -1,5 +1,6 @@
 /*! both-controller v3.6.4 — Assistant no-FOUT, image prewarm, sticky review (mobile),
-    smooth animations, Google icon safe, and PERSISTED rotation across pages (fixed gap resume). */
+    smooth animations, Google icon safe, and PERSISTED rotation across pages (fixed gap resume).
+    + Dismiss persistence: remember index on ✕, 45s cooldown across pages. */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
   if (!hostEl) return;
@@ -18,6 +19,9 @@
   // review text trimming
   var MAX_WORDS_DESKTOP = 60;   // desktop: trim by words
   var MAX_CHARS_MOBILE  = 160;  // mobile: trim by chars
+
+  // --- Dismiss persistence (new)
+  var DISMISS_COOLDOWN_MS = Number((scriptEl && scriptEl.getAttribute("data-dismiss-cooldown-ms")) || 45000);
 
   var DEBUG     = (((scriptEl && scriptEl.getAttribute("data-debug")) || "0") === "1");
   var BADGE     = (((scriptEl && scriptEl.getAttribute("data-badge")) || "1") === "1");
@@ -312,12 +316,23 @@
       return h + "_" + arr.length;
     } catch(_){ return "0_0"; }
   }
-  function saveState(idxShown, sig){
+
+  // Save full state (optionally include dismiss flags)
+  function saveState(idxShown, sig, opt){
     try {
-      var st = { idx: idxShown, shownAt: Date.now(), sig: sig, show: SHOW_MS, gap: GAP_MS };
+      var st = {
+        idx: idxShown,
+        shownAt: Date.now(),
+        sig: sig,
+        show: SHOW_MS,
+        gap: GAP_MS
+      };
+      if (opt && opt.manualClose)   st.manualClose = true;
+      if (opt && opt.snoozeUntil)   st.snoozeUntil = Number(opt.snoozeUntil)||0;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
     } catch(_) {}
   }
+
   function restoreState(){
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
@@ -325,7 +340,8 @@
       return JSON.parse(raw);
     } catch(_){ return null; }
   }
-  // NEW: update index but KEEP previous shownAt (so we don’t turn a gap into a fresh show)
+
+  // Keep shownAt untouched when only the index must be updated (e.g., unload)
   function updateIndexOnly(newIdx, sig){
     try{
       var st = restoreState();
@@ -350,7 +366,13 @@
   function renderReviewCard(item){
     var card=document.createElement("div"); card.className="card review-card enter";
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
-    x.addEventListener("click",function(){ card.classList.remove("enter"); card.classList.add("leave"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 360); });
+    x.addEventListener("click", function(){
+      // --- Dismiss persistence (new)
+      handleDismiss();
+      card.classList.remove("enter");
+      card.classList.add("leave");
+      setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 360);
+    });
     card.appendChild(x);
 
     var header=document.createElement("div"); header.className="row-r";
@@ -383,7 +405,13 @@
   function renderPurchaseCard(p){
     var card=document.createElement("div"); card.className="card purchase-card enter";
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
-    x.addEventListener("click",function(){ card.classList.remove("enter"); card.classList.add("leave"); setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 360); });
+    x.addEventListener("click", function(){
+      // --- Dismiss persistence (new)
+      handleDismiss();
+      card.classList.remove("enter");
+      card.classList.add("leave");
+      setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 360);
+    });
     card.appendChild(x);
 
     var top=document.createElement("div"); top.className="p-top";
@@ -431,8 +459,12 @@
   /* ---- rotation with persistence ---- */
   var items=[], idx=0, loop=null, preTimer=null;
 
+  // --- Dismiss persistence: flag to stop showing on this page after ✕
+  var isDismissed = false;
+
   function showNext(overrideShowMs){
     if(!items.length) return;
+    if(isDismissed) return; // stop if user dismissed on this page
 
     var itm = items[idx % items.length];
     var shownIndex = idx % items.length; // about to show this one
@@ -442,11 +474,12 @@
     if (itm.kind === "review") wrap.classList.add('sticky-review'); else wrap.classList.remove('sticky-review');
 
     warmForItem(itm).then(function(){
+      if(isDismissed) return; // re-check after preload
       var card = (itm.kind==="purchase") ? renderPurchaseCard(itm.data) : renderReviewCard(itm.data);
       wrap.innerHTML=""; 
       wrap.appendChild(card);
 
-      // persist "start of show" timestamp and index
+      // persist "start of show" timestamp and index (also clears any prior manualClose/snooze)
       saveState(shownIndex, itemsSig);
 
       var showFor = Math.max(300, Number(overrideShowMs||SHOW_MS));
@@ -466,12 +499,14 @@
   function startFrom(beginDelayMs){
     if(loop) clearInterval(loop);
     if(preTimer) clearTimeout(preTimer);
+    if(isDismissed) return;
 
     var cycle = SHOW_MS + GAP_MS;
 
     function beginInterval(){
+      if(isDismissed) return;
       showNext();
-      loop = setInterval(showNext, cycle);
+      loop = setInterval(function(){ if(!isDismissed) showNext(); }, cycle);
     }
 
     if (beginDelayMs && beginDelayMs > 0){
@@ -479,6 +514,22 @@
     } else {
       beginInterval();
     }
+  }
+
+  // --- Dismiss persistence: central handler for ✕ clicks
+  function handleDismiss(){
+    try{
+      isDismissed = true;
+      if(loop) clearInterval(loop);
+      if(preTimer) clearTimeout(preTimer);
+
+      // compute the index of the CURRENTLY displayed item
+      var current = (idx - 1 + (items.length*2)) % (items.length||1);
+      var until = Date.now() + DISMISS_COOLDOWN_MS;
+
+      // save index + snooze markers; next page will honor this
+      saveState(current, itemsSig, { manualClose: true, snoozeUntil: until });
+    }catch(_){}
   }
 
   /* ---- data loading ---- */
@@ -508,15 +559,34 @@
 
         var state = restoreState();
         var cycle = SHOW_MS + GAP_MS;
+        var now = Date.now();
 
+        // --- Dismiss persistence on new page
+        if (state && state.sig === itemsSig && state.manualClose) {
+          var snoozeUntil = Number(state.snoozeUntil||0);
+          // continue from the same point → start with the NEXT item after the dismissed one
+          idx = ((Number(state.idx||0) + 1) % items.length + items.length) % items.length;
+
+          if (snoozeUntil > now) {
+            // wait out remaining cooldown, then start
+            var wait = snoozeUntil - now;
+            startFrom(wait);
+            return;
+          } else {
+            // cooldown over, start immediately
+            startFrom(0);
+            return;
+          }
+        }
+
+        // --- Normal resume logic (unchanged)
         if (state && state.sig === itemsSig) {
-          var now = Date.now();
           var elapsed = Math.max(0, now - Number(state.shownAt||0));
           var step = Math.floor(elapsed / cycle);
           var elapsedInCycle = elapsed % cycle;
 
           if (elapsedInCycle < SHOW_MS){
-            // still in "show" window → resume that card until it finishes
+            // still in show window → resume that card until it finishes
             idx = (Number(state.idx||0) + step) % items.length;
             var remainingShow = SHOW_MS - elapsedInCycle;
 
@@ -544,7 +614,7 @@
     });
   }
 
-  // Fixed: only update index on unload; keep original shownAt intact
+  // Fixed: only update index on unload; keep original shownAt intact (and keep any manualClose/snooze)
   window.addEventListener('beforeunload', function(){
     try {
       if (!items.length) return;
