@@ -1,7 +1,8 @@
 /*! both-controller v3.6.4 — Assistant no-FOUT, image prewarm, sticky review (mobile),
     smooth animations, Google icon safe, and PERSISTED rotation across pages (fixed gap resume).
     + Dismiss persistence: remember index on ✕, 45s cooldown across pages.
-    + "קרא עוד" pill for long reviews (20/30-word trim).
+    + "קרא עוד" pill for long reviews (20/30-word trim) with pause/resume of timer.
+    + Skip reviews that have no text.
 */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
@@ -148,7 +149,7 @@
   + '  .wrap.sticky-review{right:0;left:0;bottom:0;padding:0 0 env(safe-area-inset-bottom,0);}'
   + '  .wrap.sticky-review .card.review-card{width:100%;max-width:none;border-radius:16px 16px 0 0;margin:0;}'
   + '  .row-r{padding:12px 10px 8px;}'
-  + '  .p-top{grid-template-columns:1fr 144px;padding:13px 10px 6px;gap:10px;}'
+  + '  .p-top{grid-template-columns:1fr 144px;padding:13px 10px 6px;gap:10px;}'  
   + '  .pframe{width:144px;height:104px;}'
   + '  .hotcap{top:-10px;}'
   + '  .card.review-card .readmore-pill{right:86px;top:0;transform:translateY(-50%);font-size:10px;padding:4px 8px;}'
@@ -384,6 +385,73 @@
     return out;
   }
 
+  /* ---- rotation + timers ---- */
+  var items=[], idx=0, loop=null, preTimer=null;
+
+  // --- Dismiss persistence: flag to stop showing on this page after ✕
+  var isDismissed = false;
+
+  // timers for current card
+  var currentCard = null;
+  var fadeTimeout = null;
+  var removeTimeout = null;
+  var currentShowStart = 0;
+  var currentShowDuration = 0;
+  var remainingShowMs = 0;
+  var isPausedForReadMore = false;
+
+  function clearShowTimers(){
+    if(fadeTimeout){ clearTimeout(fadeTimeout); fadeTimeout = null; }
+    if(removeTimeout){ clearTimeout(removeTimeout); removeTimeout = null; }
+  }
+
+  function scheduleHide(showFor){
+    clearShowTimers();
+    if(!currentCard) return;
+    currentShowDuration = showFor;
+    currentShowStart = Date.now();
+    var fadeOutMs = Math.max(0, showFor - 360);
+
+    fadeTimeout = setTimeout(function(){
+      if(!currentCard) return;
+      currentCard.classList.remove("enter");
+      currentCard.classList.add("leave");
+    }, fadeOutMs);
+
+    removeTimeout = setTimeout(function(){
+      if(currentCard && currentCard.parentNode){
+        currentCard.parentNode.removeChild(currentCard);
+      }
+      currentCard = null;
+    }, showFor);
+  }
+
+  function pauseForReadMore(){
+    if(isPausedForReadMore || !currentCard) return;
+    isPausedForReadMore = true;
+
+    if(loop){ clearInterval(loop); loop = null; }
+    if(preTimer){ clearTimeout(preTimer); preTimer = null; }
+
+    var now = Date.now();
+    var elapsed = now - currentShowStart;
+    remainingShowMs = Math.max(0, currentShowDuration - elapsed);
+
+    clearShowTimers();
+  }
+
+  function resumeFromReadMore(){
+    if(!isPausedForReadMore || !currentCard) return;
+    isPausedForReadMore = false;
+
+    var showMs = Math.max(300, remainingShowMs || 300);
+    scheduleHide(showMs);
+
+    preTimer = setTimeout(function(){
+      startFrom(0);
+    }, showMs + GAP_MS);
+  }
+
   /* ---- renderers ---- */
   function renderReviewCard(item){
     var card=document.createElement("div"); card.className="card review-card enter";
@@ -392,6 +460,7 @@
     x.addEventListener("click", function(){
       // --- Dismiss persistence (new)
       handleDismiss();
+      clearShowTimers();
       card.classList.remove("enter");
       card.classList.add("leave");
       setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 360);
@@ -405,7 +474,6 @@
     meta.appendChild(name);
     header.appendChild(avatarEl); header.appendChild(meta); header.appendChild(document.createElement("span"));
 
-    // full + truncated text
     var fullText = normalizeSpaces(item.text);
     var shortText = truncateForReview(fullText);
 
@@ -414,7 +482,6 @@
     body.textContent=shortText;
     body.dataset.expanded = "0";
 
-    // Read-more pill only if we actually trimmed
     if (shouldShowReadMore(fullText)){
       var readMore = document.createElement("button");
       readMore.type = "button";
@@ -428,11 +495,13 @@
           body.textContent = shortText;
           body.className = "body "+scaleClassForReview(shortText);
           readMore.textContent = "קרא עוד";
+          resumeFromReadMore();
         } else {
           body.dataset.expanded = "1";
           body.textContent = fullText;
           body.className = "body "+scaleClassForReview(fullText);
           readMore.textContent = "סגור";
+          pauseForReadMore();
         }
       });
 
@@ -461,6 +530,7 @@
     x.addEventListener("click", function(){
       // --- Dismiss persistence (new)
       handleDismiss();
+      clearShowTimers();
       card.classList.remove("enter");
       card.classList.add("leave");
       setTimeout(function(){ if(card.parentNode){ card.parentNode.removeChild(card);} }, 360);
@@ -509,15 +579,13 @@
     return card;
   }
 
-  /* ---- rotation with persistence ---- */
-  var items=[], idx=0, loop=null, preTimer=null;
-
-  // --- Dismiss persistence: flag to stop showing on this page after ✕
-  var isDismissed = false;
-
   function showNext(overrideShowMs){
     if(!items.length) return;
     if(isDismissed) return; // stop if user dismissed on this page
+
+    clearShowTimers();
+    isPausedForReadMore = false;
+    remainingShowMs = 0;
 
     var itm = items[idx % items.length];
     var shownIndex = idx % items.length; // about to show this one
@@ -531,21 +599,13 @@
       var card = (itm.kind==="purchase") ? renderPurchaseCard(itm.data) : renderReviewCard(itm.data);
       wrap.innerHTML=""; 
       wrap.appendChild(card);
+      currentCard = card;
 
       // persist "start of show" timestamp and index (also clears any prior manualClose/snooze)
       saveState(shownIndex, itemsSig);
 
       var showFor = Math.max(300, Number(overrideShowMs||SHOW_MS));
-      var fadeOutMs = Math.max(0, showFor - 360);
-
-      setTimeout(function(){ 
-        card.classList.remove("enter"); 
-        card.classList.add("leave"); 
-      }, fadeOutMs);
-
-      setTimeout(function(){ 
-        if(card && card.parentNode){ card.parentNode.removeChild(card); } 
-      }, showFor);
+      scheduleHide(showFor);
     });
   }
 
@@ -575,6 +635,8 @@
       isDismissed = true;
       if(loop) clearInterval(loop);
       if(preTimer) clearTimeout(preTimer);
+      clearShowTimers();
+      isPausedForReadMore = false;
 
       // compute the index of the CURRENTLY displayed item
       var current = (idx - 1 + (items.length*2)) % (items.length||1);
@@ -592,6 +654,11 @@
 
     Promise.all([p1,p2]).then(function(r){
       var rev = r[0]||[], pur = r[1]||[];
+
+      // skip reviews without any text
+      rev = rev.filter(function(v){
+        return normalizeSpaces(v.text).length > 0;
+      });
 
       // prewarm images early
       rev.forEach(function(v){ if(v.profilePhotoUrl) warmImage(v.profilePhotoUrl); });
