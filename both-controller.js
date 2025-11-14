@@ -1,7 +1,7 @@
 /*! both-controller v3.6.4 — Assistant no-FOUT, image prewarm, sticky review (mobile),
     smooth animations, Google icon safe, and PERSISTED rotation across pages (fixed gap resume).
     + Dismiss persistence: remember index on ✕, 45s cooldown across pages.
-    + "קרא עוד" pill for long reviews (20/30-word trim) with pause/resume of timer.
+    + "קרא עוד" pill for long reviews (mobile: 20 words, desktop: 190 chars) with pause/resume timer.
     + Skip reviews that have no text.
 */
 (function () {
@@ -19,9 +19,10 @@
   var GAP_MS    = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))        || 6000);
   var INIT_MS   = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
 
-  // review text trimming (by words)
-  var MAX_WORDS_DESKTOP = 30; // desktop: max 30 words
-  var MAX_WORDS_MOBILE  = 20; // mobile: max 20 words
+  // review text trimming:
+  // mobile: by words, desktop: by characters (for preview & "read more" trigger)
+  var MAX_WORDS_MOBILE           = 20;   // mobile: show up to 20 words before "קרא עוד"
+  var MAX_CHARS_DESKTOP_PREVIEW  = 190;  // desktop: show up to 190 chars before "קרא עוד"
 
   // --- Dismiss persistence (new)
   var DISMISS_COOLDOWN_MS = Number((scriptEl && scriptEl.getAttribute("data-dismiss-cooldown-ms")) || 45000);
@@ -149,7 +150,7 @@
   + '  .wrap.sticky-review{right:0;left:0;bottom:0;padding:0 0 env(safe-area-inset-bottom,0);}'
   + '  .wrap.sticky-review .card.review-card{width:100%;max-width:none;border-radius:16px 16px 0 0;margin:0;}'
   + '  .row-r{padding:12px 10px 8px;}'
-  + '  .p-top{grid-template-columns:1fr 144px;padding:13px 10px 6px;gap:10px;}'  
+  + '  .p-top{grid-template-columns:1fr 144px;padding:13px 10px 6px;gap:10px;}'
   + '  .pframe{width:144px;height:104px;}'
   + '  .hotcap{top:-10px;}'
   + '  .card.review-card .readmore-pill{right:86px;top:0;transform:translateY(-50%);font-size:10px;padding:4px 8px;}'
@@ -181,12 +182,18 @@
     return t.split(" ").length;
   }
 
+  // Create preview text per device
   function truncateForReview(text){
     var t = normalizeSpaces(text);
-    var words = t ? t.split(" ") : [];
-    var limit = IS_MOBILE ? MAX_WORDS_MOBILE : MAX_WORDS_DESKTOP;
-    if(words.length > limit) return words.slice(0, limit).join(" ") + "…";
-    return t;
+    if (IS_MOBILE){
+      var words = t ? t.split(" ") : [];
+      var limit = MAX_WORDS_MOBILE;
+      if(words.length > limit) return words.slice(0, limit).join(" ") + "…";
+      return t;
+    } else {
+      var n = MAX_CHARS_DESKTOP_PREVIEW;
+      return t.length > n ? t.slice(0, n).trim() + "…" : t;
+    }
   }
 
   function scaleClassForReview(text){
@@ -197,10 +204,14 @@
     return "";
   }
 
+  // Decide if "קרא עוד" is needed
   function shouldShowReadMore(fullText){
-    var w = wordCount(fullText);
-    var limit = IS_MOBILE ? MAX_WORDS_MOBILE : MAX_WORDS_DESKTOP;
-    return w > limit;
+    var t = normalizeSpaces(fullText);
+    if (IS_MOBILE){
+      return wordCount(t) > MAX_WORDS_MOBILE;
+    } else {
+      return t.length > MAX_CHARS_DESKTOP_PREVIEW;
+    }
   }
 
   function timeAgo(ts){
