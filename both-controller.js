@@ -107,7 +107,7 @@
   + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
   + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;direction:rtl;}'
   + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(2,6,23,.07);font-size:12px;opacity:.95;direction:rtl;overflow:visible;}'
-  + '.gmark{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;overflow:visible;}'
+  + '.gmark{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;overflow:visible;}'
   + '.gmark svg{width:18px;height:18px;display:block;overflow:visible;}'
   + '.gstars{font-size:13px;letter-spacing:1px;color:#f5b50a;text-shadow:0 0 .5px rgba(0,0,0,.2);}'
   + '.badgeText{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.9;}'
@@ -169,6 +169,7 @@
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
   function escapeHTML(s){ return String(s||"").replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;","&gt;":">","\"":"&quot;","'":"&#39;"}[c]);}); }
+
   function firstName(s){ s=String(s||"").trim(); var parts=s.split(/\s+/); return parts[0]||s; }
 
   function normalizeSpaces(text){
@@ -500,7 +501,7 @@
       + '  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">'
       + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.26 1.43-1.03 2.6-2.18 3.38l2.57 2.04C20.06 18.15 21.35 15.87 21.35 13c0-.64-.06-1.24-.17-1.9z"></path>'
       + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.9.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56C5.12 20.47 8.39 22 12.18 22z"></path>'
-      + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64_H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
+      + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72z"></path>'
       + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2C8.4 2 5.17 4.17 3.4 7.64l3.29 2.56C7.46 7.88 9.62 5.5 12.18 5.5z"></path>'
       + '  </svg>'
       + '</span>'
@@ -555,7 +556,9 @@
 
     var hotcap = document.createElement('div'); hotcap.className = 'hotcap';
     hotcap.innerHTML = '<span class="badge-hot pulse" role="status" aria-live="polite">'
-      + '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 2s1 3-1.5 5.5S9 12 9 14a5 5 0 0010 0c0-3-2-4.5-3-6.5-1-2 0-5-2.5-5.5z"/></svg>'
+      + '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+      + '  <path d="M13 2.5C13 4.3 12.2 5.7 11.1 7 10 8.4 9 9.8 9 11.8A4 4 0 0 0 13 16a4 4 0 0 0 4-4c0-2.5-1.3-4-2.4-5.3C13.4 5.3 13 4.3 13 2.5zM11 3.2C9 5 7 7.9 7 11.3 7 15.4 9.9 18 13 18s6-2.6 6-6.7c0-3.2-1.7-5.4-3.3-7.4.3 1.3.2 2.7-.4 3.8C14.6 7 14 5.6 14 3.7 13.2 3.1 12.2 2.7 11 3.2z"></path>'
+      + '</svg>'
       + 'פופולרי עכשיו</span>';
     media.appendChild(hotcap);
 
