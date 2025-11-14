@@ -1,8 +1,9 @@
 /*! both-controller v3.6.4 — Assistant no-FOUT, image prewarm, sticky review (mobile),
     smooth animations, Google icon safe, and PERSISTED rotation across pages (fixed gap resume).
     + Dismiss persistence: remember index on ✕, 45s cooldown across pages.
-    + "קרא עוד" pill for long reviews (mobile: 20 words, desktop: 190 chars) with pause/resume timer.
+    + "קרא עוד" pill for long reviews with pause/resume timer.
     + Skip reviews that have no text.
+    + Desktop preview 190 chars, mobile preview 120 chars.
 */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
@@ -19,10 +20,9 @@
   var GAP_MS    = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))        || 6000);
   var INIT_MS   = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
 
-  // review text trimming:
-  // mobile: by words, desktop: by characters (for preview & "read more" trigger)
-  var MAX_WORDS_MOBILE           = 20;   // mobile: show up to 20 words before "קרא עוד"
-  var MAX_CHARS_DESKTOP_PREVIEW  = 190;  // desktop: show up to 190 chars before "קרא עוד"
+  // review text trimming for preview & "read more" trigger
+  var MAX_CHARS_MOBILE_PREVIEW  = 120; // mobile: show up to 120 chars
+  var MAX_CHARS_DESKTOP_PREVIEW = 190; // desktop: show up to 190 chars
 
   // --- Dismiss persistence (new)
   var DISMISS_COOLDOWN_MS = Number((scriptEl && scriptEl.getAttribute("data-dismiss-cooldown-ms")) || 45000);
@@ -106,7 +106,6 @@
   + '.meta{display:flex;flex-direction:column;gap:4px;}'
   + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
   + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;direction:rtl;}'
-  + '.body.small{font-size:12.5px;} .body.tiny{font-size:11.5px;}'
   + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(2,6,23,.07);font-size:12px;opacity:.95;direction:rtl;overflow:visible;}'
   + '.gmark{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;overflow:visible;}'
   + '.gmark svg{width:18px;height:18px;display:block;overflow:visible;}'
@@ -176,42 +175,18 @@
     return (text||"").replace(/\s+/g," ").trim();
   }
 
-  function wordCount(text){
-    var t = normalizeSpaces(text);
-    if(!t) return 0;
-    return t.split(" ").length;
-  }
-
   // Create preview text per device
   function truncateForReview(text){
     var t = normalizeSpaces(text);
-    if (IS_MOBILE){
-      var words = t ? t.split(" ") : [];
-      var limit = MAX_WORDS_MOBILE;
-      if(words.length > limit) return words.slice(0, limit).join(" ") + "…";
-      return t;
-    } else {
-      var n = MAX_CHARS_DESKTOP_PREVIEW;
-      return t.length > n ? t.slice(0, n).trim() + "…" : t;
-    }
-  }
-
-  function scaleClassForReview(text){
-    if(IS_MOBILE) return "";
-    var w = wordCount(text);
-    if(w>40) return "tiny";
-    if(w>26) return "small";
-    return "";
+    var n = IS_MOBILE ? MAX_CHARS_MOBILE_PREVIEW : MAX_CHARS_DESKTOP_PREVIEW;
+    return t.length > n ? t.slice(0, n).trim() + "…" : t;
   }
 
   // Decide if "קרא עוד" is needed
   function shouldShowReadMore(fullText){
     var t = normalizeSpaces(fullText);
-    if (IS_MOBILE){
-      return wordCount(t) > MAX_WORDS_MOBILE;
-    } else {
-      return t.length > MAX_CHARS_DESKTOP_PREVIEW;
-    }
+    var limit = IS_MOBILE ? MAX_CHARS_MOBILE_PREVIEW : MAX_CHARS_DESKTOP_PREVIEW;
+    return t.length > limit;
   }
 
   function timeAgo(ts){
@@ -489,7 +464,7 @@
     var shortText = truncateForReview(fullText);
 
     var body=document.createElement("div");
-    body.className="body "+scaleClassForReview(shortText);
+    body.className="body";
     body.textContent=shortText;
     body.dataset.expanded = "0";
 
@@ -504,13 +479,13 @@
         if (body.dataset.expanded === "1") {
           body.dataset.expanded = "0";
           body.textContent = shortText;
-          body.className = "body "+scaleClassForReview(shortText);
+          body.className = "body";
           readMore.textContent = "קרא עוד";
           resumeFromReadMore();
         } else {
           body.dataset.expanded = "1";
           body.textContent = fullText;
-          body.className = "body "+scaleClassForReview(fullText);
+          body.className = "body";
           readMore.textContent = "סגור";
           pauseForReadMore();
         }
@@ -525,7 +500,7 @@
       + '  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">'
       + '    <path fill="#4285F4" d="M21.35 11.1h-9.17v2.98h5.37c-.26 1.43-1.03 2.6-2.18 3.38l2.57 2.04C20.06 18.15 21.35 15.87 21.35 13c0-.64-.06-1.24-.17-1.9z"></path>'
       + '    <path fill="#34A853" d="M12.18 22c2.67 0 4.9-.88 6.53-2.36l-3.2-2.52c-.9.6-2.03.95-3.33.95-2.56 0-4.72-1.73-5.49-4.05H3.4v2.56C5.12 20.47 8.39 22 12.18 22z"></path>'
-      + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
+      + '    <path fill="#FBBC05" d="M6.69 14.02a5.88 5.88 0 0 1 0-3.82V7.64_H3.4a9.82 9.82 0 0 0 0 8.72"></path>'
       + '    <path fill="#EA4335" d="M12.18 5.5c1.45 0 2.75.5 3.77 1.48l2.82-2.82A9.36 9.36 0 0 0 12.18 2C8.4 2 5.17 4.17 3.4 7.64l3.29 2.56C7.46 7.88 9.62 5.5 12.18 5.5z"></path>'
       + '  </svg>'
       + '</span>'
