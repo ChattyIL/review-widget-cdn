@@ -511,7 +511,10 @@
 
         var finalText;
         if (best > 0 && best < full.length) {
-          finalText = full.slice(0, best).trim() + "…";
+          // Extra safety: cut a few extra chars to avoid 3rd line on edge cases
+          var SAFE_CHARS = 12;
+          var safeIndex = Math.max(0, best - SAFE_CHARS);
+          finalText = full.slice(0, safeIndex).trim() + "…";
         } else {
           finalText = full;
         }
@@ -740,6 +743,17 @@
       console.error("[both-controller v3.6.4]", e);
     });
   }
+
+  // Re-apply clamp on resize for the currently visible (collapsed) review
+  window.addEventListener('resize', function(){
+    try{
+      if(!currentCard || !currentCard._setupReadMore) return;
+      var body = currentCard.querySelector('.body');
+      if(body && body.dataset.expanded === "0"){
+        currentCard._setupReadMore();
+      }
+    }catch(_){}
+  });
 
   window.addEventListener('beforeunload', function(){
     try {
