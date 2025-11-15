@@ -101,6 +101,7 @@
   + '.meta{display:flex;flex-direction:column;gap:4px;}'
   + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
   + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;direction:rtl;}'
+  + '.body.ltr{direction:ltr;text-align:left;}'
   + '.body.clamped{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}'
   + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(2,6,23,.07);font-size:12px;opacity:.95;direction:rtl;overflow:visible;}'
   + '.gmark{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;overflow:visible;}'
@@ -439,6 +440,12 @@
     var body=document.createElement("div");
     body.className="body";
     body.dataset.expanded = "0";
+
+    // Detect RTL (Hebrew) vs LTR (e.g. English). Hebrew stays RTL; others become LTR.
+    var isRTL = /[\u0590-\u05FF]/.test(fullText);
+    if (!isRTL) {
+      body.classList.add("ltr");
+    }
 
     var readMore = null;
     function ensureReadMore(){
