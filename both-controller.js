@@ -1,7 +1,7 @@
 /*! both-controller v3.6.4 — Assistant no-FOUT, image prewarm, sticky review (mobile),
     smooth animations, Google icon safe, and PERSISTED rotation across pages (fixed gap resume).
     + Dismiss persistence: remember index on ✕, 45s cooldown across pages.
-    + "קרא עוד" pill for multi-line reviews (true 2-line truncation), with pause/resume timer.
+    + "קרא עוד" pill for multi-line reviews (true multi-line truncation), with pause/resume timer.
     + Skip reviews that have no text.
 */
 (function () {
@@ -102,7 +102,7 @@
   + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
   + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;direction:rtl;}'
   + '.body.ltr{direction:ltr;text-align:left;}'
-  + '.body.clamped{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}'
+  + '.body.clamped{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}'
   + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(2,6,23,.07);font-size:12px;opacity:.95;direction:rtl;overflow:visible;}'
   + '.gmark{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;overflow:visible;}'
   + '.gmark svg{width:18px;height:18px;display:block;overflow:visible;}'
@@ -150,6 +150,7 @@
   + '  .pframe{width:144px;height:104px;}'
   + '  .hotcap{top:-10px;}'
   + '  .card.review-card .readmore-pill{right:86px;top:0;transform:translateY(-50%);font-size:10px;padding:4px 8px;}'
+  + '  .body.clamped{-webkit-line-clamp:2;}'
   + '}'
   + '@media (min-width:720px){ .pframe{width:160px;height:116px;} }'
   ;
@@ -475,7 +476,7 @@
       card.appendChild(readMore);
     }
 
-    // Clamp text to at most 2 lines by truncating the string (no height cropping).
+    // Clamp text to at most N lines (3 desktop, 2 mobile) by truncating the string (no height cropping).
     card._setupReadMore = function(){
       try{
         var full = fullText;
@@ -490,19 +491,23 @@
         }
         var padTop = parseFloat(style.paddingTop) || 0;
         var padBottom = parseFloat(style.paddingBottom) || 0;
-        var clampHeight = lh * 2 + padTop + padBottom;
+
+        var isMobile = window.matchMedia && window.matchMedia('(max-width:480px)').matches;
+        var maxLines = isMobile ? 2 : 3;
+
+        var clampHeight = lh * maxLines + padTop + padBottom;
 
         var fullHeight = body.scrollHeight;
 
         if (fullHeight <= clampHeight + 1) {
-          // Fits in 2 lines → no truncation, no button
+          // Fits in allowed lines → no truncation, no button
           body.dataset.expanded = "1";
           body.classList.remove("clamped");
           card._truncatedText = full;
           return;
         }
 
-        // Needs truncation: binary search best substring length that fits in 2 lines
+        // Needs truncation: binary search best substring length that fits in allowed lines
         var low = 0, high = full.length, best = 0;
         while (low <= high) {
           var mid = (low + high) >> 1;
@@ -518,7 +523,7 @@
 
         var finalText;
         if (best > 0 && best < full.length) {
-          // Extra safety: cut a few extra chars to avoid 3rd line on edge cases
+          // Extra safety: cut a few extra chars to avoid overflow on edge cases
           var SAFE_CHARS = 12;
           var safeIndex = Math.max(0, best - SAFE_CHARS);
           finalText = full.slice(0, safeIndex).trim() + "…";
