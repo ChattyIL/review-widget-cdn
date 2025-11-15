@@ -443,9 +443,9 @@
     var fullText = normalizeSpaces(item.text);
 
     var body=document.createElement("div");
-    body.className="body";        // start un-clamped, we'll decide in _setupReadMore
+    body.className="body";
     body.textContent=fullText;
-    body.dataset.expanded = "0";  // default collapsed; may change if no overflow
+    body.dataset.expanded = "0";
     body._twoLineMaxHeight = "";
 
     var readMore = null;
@@ -491,12 +491,18 @@
           var fs = parseFloat(style.fontSize) || 14;
           lh = fs * 1.35;
         }
-        var twoLineHeight = lh * 2;
+        var padTop = parseFloat(style.paddingTop) || 0;
+        var padBottom = parseFloat(style.paddingBottom) || 0;
+
+        var twoLineContent = lh * 2;
+        var clampHeight = twoLineContent + padTop + padBottom;
         var fullHeight = body.scrollHeight;
 
-        if (fullHeight > twoLineHeight + 1) {
-          // Needs more than 2 lines → clamp to exactly 2 lines and show button
-          body._twoLineMaxHeight = twoLineHeight + "px";
+        if (fullHeight > clampHeight + 4) {
+          // Needs more than 2 lines → clamp to slightly less than 2 lines height (hides any 3rd-line pixels)
+          var target = clampHeight - 4; // 4px safety buffer
+          if (target < 0) target = clampHeight;
+          body._twoLineMaxHeight = target + "px";
           body.style.maxHeight = body._twoLineMaxHeight;
           body.style.overflow = "hidden";
           body.classList.add("clamped");
