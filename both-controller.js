@@ -1,9 +1,8 @@
 /*! both-controller v3.6.4 — Assistant no-FOUT, image prewarm, sticky review (mobile),
     smooth animations, Google icon safe, and PERSISTED rotation across pages (fixed gap resume).
     + Dismiss persistence: remember index on ✕, 45s cooldown across pages.
-    + "קרא עוד" pill for long reviews with pause/resume timer.
+    + "קרא עוד" pill for reviews that need more than 2 lines (layout-based), with pause/resume timer.
     + Skip reviews that have no text.
-    + Desktop preview 190 chars, mobile preview 120 chars.
 */
 (function () {
   var hostEl = document.getElementById("reviews-widget");
@@ -19,10 +18,6 @@
   var SHOW_MS   = Number((scriptEl && scriptEl.getAttribute("data-show-ms"))       || 15000);
   var GAP_MS    = Number((scriptEl && scriptEl.getAttribute("data-gap-ms"))        || 6000);
   var INIT_MS   = Number((scriptEl && scriptEl.getAttribute("data-init-delay-ms")) || 0);
-
-  // review text trimming for preview & "read more" trigger
-  var MAX_CHARS_MOBILE_PREVIEW  = 120; // mobile: show up to 120 chars
-  var MAX_CHARS_DESKTOP_PREVIEW = 190; // desktop: show up to 190 chars
 
   // --- Dismiss persistence (new)
   var DISMISS_COOLDOWN_MS = Number((scriptEl && scriptEl.getAttribute("data-dismiss-cooldown-ms")) || 45000);
@@ -106,6 +101,7 @@
   + '.meta{display:flex;flex-direction:column;gap:4px;}'
   + '.name{font-weight:700;font-size:14px;line-height:1.2;}'
   + '.body{padding:0 12px 12px;font-size:14px;line-height:1.35;direction:rtl;}'
+  + '.body.clamped{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}'
   + '.brand{display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:10px 12px;border-top:1px solid rgba(2,6,23,.07);font-size:12px;opacity:.95;direction:rtl;overflow:visible;}'
   + '.gmark{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;overflow:visible;}'
   + '.gmark svg{width:18px;height:18px;display:block;overflow:visible;}'
@@ -169,25 +165,10 @@
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
   function escapeHTML(s){ return String(s||"").replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;","&gt;":">","\"":"&quot;","'":"&#39;"}[c]);}); }
-
   function firstName(s){ s=String(s||"").trim(); var parts=s.split(/\s+/); return parts[0]||s; }
 
   function normalizeSpaces(text){
     return (text||"").replace(/\s+/g," ").trim();
-  }
-
-  // Create preview text per device
-  function truncateForReview(text){
-    var t = normalizeSpaces(text);
-    var n = IS_MOBILE ? MAX_CHARS_MOBILE_PREVIEW : MAX_CHARS_DESKTOP_PREVIEW;
-    return t.length > n ? t.slice(0, n).trim() + "…" : t;
-  }
-
-  // Decide if "קרא עוד" is needed
-  function shouldShowReadMore(fullText){
-    var t = normalizeSpaces(fullText);
-    var limit = IS_MOBILE ? MAX_CHARS_MOBILE_PREVIEW : MAX_CHARS_DESKTOP_PREVIEW;
-    return t.length > limit;
   }
 
   function timeAgo(ts){
@@ -462,15 +443,16 @@
     header.appendChild(avatarEl); header.appendChild(meta); header.appendChild(document.createElement("span"));
 
     var fullText = normalizeSpaces(item.text);
-    var shortText = truncateForReview(fullText);
 
     var body=document.createElement("div");
     body.className="body";
-    body.textContent=shortText;
-    body.dataset.expanded = "0";
+    body.textContent=fullText;
+    body.dataset.expanded = "1";
 
-    if (shouldShowReadMore(fullText)){
-      var readMore = document.createElement("button");
+    var readMore = null;
+    function ensureReadMore(){
+      if(readMore) return;
+      readMore = document.createElement("button");
       readMore.type = "button";
       readMore.className = "readmore-pill";
       readMore.textContent = "קרא עוד";
@@ -479,21 +461,39 @@
         e.stopPropagation();
         if (body.dataset.expanded === "1") {
           body.dataset.expanded = "0";
-          body.textContent = shortText;
-          body.className = "body";
-          readMore.textContent = "קרא עוד";
-          resumeFromReadMore();
-        } else {
-          body.dataset.expanded = "1";
-          body.textContent = fullText;
-          body.className = "body";
+          body.classList.add("clamped");
           readMore.textContent = "סגור";
           pauseForReadMore();
+        } else {
+          body.dataset.expanded = "1";
+          body.classList.remove("clamped");
+          readMore.textContent = "קרא עוד";
+          resumeFromReadMore();
         }
       });
 
       card.appendChild(readMore);
     }
+
+    // Will be called after card is in the DOM
+    card._setupReadMore = function(){
+      try{
+        var style = window.getComputedStyle(body);
+        var lh = parseFloat(style.lineHeight);
+        if(!lh || isNaN(lh)) lh = 18;
+        var maxHeight = lh * 2 + 1; // allow small rounding error
+
+        if(body.scrollHeight <= maxHeight){
+          body.dataset.expanded = "1"; // fits in <= 2 lines, no button
+          return;
+        }
+
+        // Needs more than 2 lines → clamp and show "קרא עוד"
+        body.dataset.expanded = "0";
+        body.classList.add("clamped");
+        ensureReadMore();
+      }catch(_){}
+    };
 
     var brand=document.createElement("div"); brand.className="brand";
     brand.innerHTML = ''
@@ -589,6 +589,10 @@
       wrap.innerHTML=""; 
       wrap.appendChild(card);
       currentCard = card;
+
+      if(itm.kind === "review" && typeof card._setupReadMore === "function"){
+        card._setupReadMore();
+      }
 
       // persist "start of show" timestamp and index (also clears any prior manualClose/snooze)
       saveState(shownIndex, itemsSig);
