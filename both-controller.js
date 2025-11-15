@@ -1,7 +1,7 @@
 /*! both-controller v3.6.4 — Assistant no-FOUT, image prewarm, sticky review (mobile),
     smooth animations, Google icon safe, and PERSISTED rotation across pages (fixed gap resume).
     + Dismiss persistence: remember index on ✕, 45s cooldown across pages.
-    + "קרא עוד" pill for reviews that need more than 2 lines (layout-based), with pause/resume timer.
+    + "קרא עוד" pill for multi-line reviews (layout-based), with pause/resume timer.
     + Skip reviews that have no text.
 */
 (function () {
@@ -161,6 +161,7 @@
 
   /* ---- helpers ---- */
   var IS_MOBILE = (typeof window !== "undefined") && window.matchMedia && window.matchMedia('(max-width:480px)').matches;
+  (void IS_MOBILE); // currently unused but kept for future tweaks
 
   function firstLetter(s){ s=(s||"").trim(); return (s[0]||"?").toUpperCase(); }
   function colorFromString(s){ s=s||""; for(var h=0,i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return "hsl("+(h%360)+" 70% 45%)"; }
@@ -445,9 +446,9 @@
     var fullText = normalizeSpaces(item.text);
 
     var body=document.createElement("div");
-    body.className="body";
+    body.className="body clamped";      // always clamp to 2 lines initially
     body.textContent=fullText;
-    body.dataset.expanded = "1";
+    body.dataset.expanded = "0";        // 0 = collapsed, 1 = expanded
 
     var readMore = null;
     function ensureReadMore(){
@@ -459,14 +460,16 @@
 
       readMore.addEventListener("click", function(e){
         e.stopPropagation();
-        if (body.dataset.expanded === "1") {
-          body.dataset.expanded = "0";
-          body.classList.add("clamped");
+        if (body.dataset.expanded === "0") {
+          // collapsed → expand & pause timer
+          body.dataset.expanded = "1";
+          body.classList.remove("clamped");
           readMore.textContent = "סגור";
           pauseForReadMore();
         } else {
-          body.dataset.expanded = "1";
-          body.classList.remove("clamped");
+          // expanded → collapse & resume timer
+          body.dataset.expanded = "0";
+          body.classList.add("clamped");
           readMore.textContent = "קרא עוד";
           resumeFromReadMore();
         }
@@ -475,23 +478,18 @@
       card.appendChild(readMore);
     }
 
-    // Will be called after card is in the DOM
+    // Run after card is in the DOM: decide whether we actually need "קרא עוד"
     card._setupReadMore = function(){
       try{
-        var style = window.getComputedStyle(body);
-        var lh = parseFloat(style.lineHeight);
-        if(!lh || isNaN(lh)) lh = 18;
-        var maxHeight = lh * 2 + 1; // allow small rounding error
-
-        if(body.scrollHeight <= maxHeight){
-          body.dataset.expanded = "1"; // fits in <= 2 lines, no button
-          return;
+        // With clamped class applied, clientHeight = 2 lines, scrollHeight = full text.
+        if (body.scrollHeight > body.clientHeight + 1) {
+          // There is hidden overflow -> keep clamped and show button
+          ensureReadMore();
+        } else {
+          // Text fits into 2 lines or less -> show full text, no button
+          body.classList.remove("clamped");
+          body.dataset.expanded = "1";
         }
-
-        // Needs more than 2 lines → clamp and show "קרא עוד"
-        body.dataset.expanded = "0";
-        body.classList.add("clamped");
-        ensureReadMore();
       }catch(_){}
     };
 
