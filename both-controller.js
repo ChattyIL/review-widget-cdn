@@ -1,7 +1,7 @@
 /*! both-controller v3.6.4 — Assistant no-FOUT, image prewarm, sticky review (mobile),
     smooth animations, Google icon safe, and PERSISTED rotation across pages (fixed gap resume).
     + Dismiss persistence: remember index on ✕, 45s cooldown across pages.
-    + "קרא עוד" pill for multi-line reviews (2-line clamp), with pause/resume timer.
+    + "קרא עוד" pill for multi-line reviews (true 2-line truncation), with pause/resume timer.
     + Skip reviews that have no text.
 */
 (function () {
@@ -111,7 +111,7 @@
   + '.badgeText .evid{color:#000;font-weight:700;display:inline-flex;align-items:center;gap:4px;}'
   + '.badgeText .tick{font-size:12px;line-height:1;}'
 
-  /* Read-more pill (floating just outside the card above name/avatar) */
+  /* Read-more pill */
   + '.readmore-pill{position:absolute;top:0;right:92px;transform:translateY(-50%);background:#0f172a;color:#fff;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:600;border:none;cursor:pointer;box-shadow:0 8px 22px rgba(15,23,42,.4);white-space:nowrap;z-index:4;}'
   + '.readmore-pill:hover{background:#020617;}'
 
@@ -154,7 +154,7 @@
   ;
   root.appendChild(style);
 
-  /* wrapper (revealed after font is ready) */
+  /* wrapper */
   var wrap = document.createElement("div");
   wrap.className = "wrap";
   root.appendChild(wrap);
@@ -306,7 +306,6 @@
     } catch(_){ return "0_0"; }
   }
 
-  // Save full state (optionally include dismiss flags)
   function saveState(idxShown, sig, opt){
     try {
       var st = {
@@ -330,7 +329,6 @@
     } catch(_){ return null; }
   }
 
-  // Keep shownAt untouched when only the index must be updated (e.g., unload)
   function updateIndexOnly(newIdx, sig){
     try{
       var st = restoreState();
@@ -353,11 +351,8 @@
 
   /* ---- rotation + timers ---- */
   var items=[], idx=0, loop=null, preTimer=null;
-
-  // --- Dismiss persistence: flag to stop showing on this page after ✕
   var isDismissed = false;
 
-  // timers for current card
   var currentCard = null;
   var fadeTimeout = null;
   var removeTimeout = null;
@@ -424,7 +419,6 @@
 
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
     x.addEventListener("click", function(){
-      // --- Dismiss persistence (new)
       handleDismiss();
       clearShowTimers();
       card.classList.remove("enter");
@@ -444,9 +438,7 @@
 
     var body=document.createElement("div");
     body.className="body";
-    body.textContent=fullText;
     body.dataset.expanded = "0";
-    body._twoLineMaxHeight = "";
 
     var readMore = null;
     function ensureReadMore(){
@@ -459,21 +451,15 @@
       readMore.addEventListener("click", function(e){
         e.stopPropagation();
         if (body.dataset.expanded === "0") {
-          // collapsed → expand & pause timer
           body.dataset.expanded = "1";
           body.classList.remove("clamped");
-          body.style.maxHeight = "";
-          body.style.overflow = "";
+          body.textContent = card._fullText;
           readMore.textContent = "סגור";
           pauseForReadMore();
         } else {
-          // expanded → collapse & resume timer
           body.dataset.expanded = "0";
           body.classList.add("clamped");
-          if (body._twoLineMaxHeight) {
-            body.style.maxHeight = body._twoLineMaxHeight;
-          }
-          body.style.overflow = "hidden";
+          body.textContent = card._truncatedText;
           readMore.textContent = "קרא עוד";
           resumeFromReadMore();
         }
@@ -482,9 +468,13 @@
       card.appendChild(readMore);
     }
 
-    // Decide if we need clamping and the button, based on actual height
+    // Clamp text to at most 2 lines by truncating the string (no height cropping).
     card._setupReadMore = function(){
       try{
+        var full = fullText;
+        card._fullText = full;
+
+        body.textContent = full;
         var style = window.getComputedStyle(body);
         var lh = parseFloat(style.lineHeight);
         if(!lh || isNaN(lh)){
@@ -493,28 +483,45 @@
         }
         var padTop = parseFloat(style.paddingTop) || 0;
         var padBottom = parseFloat(style.paddingBottom) || 0;
+        var clampHeight = lh * 2 + padTop + padBottom;
 
-        var twoLineContent = lh * 2;
-        var clampHeight = twoLineContent + padTop + padBottom;
         var fullHeight = body.scrollHeight;
 
-        if (fullHeight > clampHeight + 4) {
-          // Needs more than 2 lines → clamp to slightly less than 2 lines height (hides any 3rd-line pixels)
-          var target = clampHeight - 4; // 4px safety buffer
-          if (target < 0) target = clampHeight;
-          body._twoLineMaxHeight = target + "px";
-          body.style.maxHeight = body._twoLineMaxHeight;
-          body.style.overflow = "hidden";
-          body.classList.add("clamped");
-          body.dataset.expanded = "0";
-          ensureReadMore();
-        } else {
-          // Fits into 2 lines → show full text, no button
-          body.classList.remove("clamped");
-          body.style.maxHeight = "";
-          body.style.overflow = "";
+        if (fullHeight <= clampHeight + 1) {
+          // Fits in 2 lines → no truncation, no button
           body.dataset.expanded = "1";
+          body.classList.remove("clamped");
+          card._truncatedText = full;
+          return;
         }
+
+        // Needs truncation: binary search best substring length that fits in 2 lines
+        var low = 0, high = full.length, best = 0;
+        while (low <= high) {
+          var mid = (low + high) >> 1;
+          var test = full.slice(0, mid).trim();
+          body.textContent = test ? (test + "…") : "";
+          if (body.scrollHeight <= clampHeight + 1) {
+            best = mid;
+            low = mid + 1;
+          } else {
+            high = mid - 1;
+          }
+        }
+
+        var finalText;
+        if (best > 0 && best < full.length) {
+          finalText = full.slice(0, best).trim() + "…";
+        } else {
+          finalText = full;
+        }
+
+        body.textContent = finalText;
+        body.dataset.expanded = "0";
+        body.classList.add("clamped");
+        card._truncatedText = finalText;
+
+        ensureReadMore();
       }catch(_){}
     };
 
@@ -538,7 +545,6 @@
     var card=document.createElement("div"); card.className="card purchase-card enter";
     var x=document.createElement("button"); x.className="xbtn"; x.setAttribute("aria-label","Close"); x.textContent="×";
     x.addEventListener("click", function(){
-      // --- Dismiss persistence (new)
       handleDismiss();
       clearShowTimers();
       card.classList.remove("enter");
@@ -593,21 +599,20 @@
 
   function showNext(overrideShowMs){
     if(!items.length) return;
-    if(isDismissed) return; // stop if user dismissed on this page
+    if(isDismissed) return;
 
     clearShowTimers();
     isPausedForReadMore = false;
     remainingShowMs = 0;
 
     var itm = items[idx % items.length];
-    var shownIndex = idx % items.length; // about to show this one
+    var shownIndex = idx % items.length;
     idx++;
 
-    // sticky review on mobile (purchases not sticky)
     if (itm.kind === "review") wrap.classList.add('sticky-review'); else wrap.classList.remove('sticky-review');
 
     warmForItem(itm).then(function(){
-      if(isDismissed) return; // re-check after preload
+      if(isDismissed) return;
       var card = (itm.kind==="purchase") ? renderPurchaseCard(itm.data) : renderReviewCard(itm.data);
       wrap.innerHTML=""; 
       wrap.appendChild(card);
@@ -617,7 +622,6 @@
         card._setupReadMore();
       }
 
-      // persist "start of show" timestamp and index (also clears any prior manualClose/snooze)
       saveState(shownIndex, itemsSig);
 
       var showFor = Math.max(300, Number(overrideShowMs||SHOW_MS));
@@ -645,7 +649,6 @@
     }
   }
 
-  // --- Dismiss persistence: central handler for ✕ clicks
   function handleDismiss(){
     try{
       isDismissed = true;
@@ -654,11 +657,9 @@
       clearShowTimers();
       isPausedForReadMore = false;
 
-      // compute the index of the CURRENTLY displayed item
       var current = (idx - 1 + (items.length*2)) % (items.length||1);
       var until = Date.now() + DISMISS_COOLDOWN_MS;
 
-      // save index + snooze markers; next page will honor this
       saveState(current, itemsSig, { manualClose: true, snoozeUntil: until });
     }catch(_){}
   }
@@ -671,16 +672,13 @@
     Promise.all([p1,p2]).then(function(r){
       var rev = r[0]||[], pur = r[1]||[];
 
-      // skip reviews without any text
       rev = rev.filter(function(v){
         return normalizeSpaces(v.text).length > 0;
       });
 
-      // prewarm images early
       rev.forEach(function(v){ if(v.profilePhotoUrl) warmImage(v.profilePhotoUrl); });
       pur.forEach(function(v){ if(v.image) warmImage(v.image); });
 
-      // interleave and sign
       items = interleave(rev, pur);
       itemsSig = itemsSignature(items);
       log("total items:", items.length);
@@ -691,38 +689,32 @@
       }
 
       ensureAssistantInHead().then(function(){
-        wrap.classList.add('ready'); // reveal only after Assistant is ready
+        wrap.classList.add('ready');
 
         var state = restoreState();
         var cycle = SHOW_MS + GAP_MS;
         var now = Date.now();
 
-        // --- Dismiss persistence on new page
         if (state && state.sig === itemsSig && state.manualClose) {
           var snoozeUntil = Number(state.snoozeUntil||0);
-          // continue from the same point → start with the NEXT item after the dismissed one
           idx = ((Number(state.idx||0) + 1) % items.length + items.length) % items.length;
 
           if (snoozeUntil > now) {
-            // wait out remaining cooldown, then start
             var wait = snoozeUntil - now;
             startFrom(wait);
             return;
           } else {
-            // cooldown over, start immediately
             startFrom(0);
             return;
           }
         }
 
-        // --- Normal resume logic (unchanged)
         if (state && state.sig === itemsSig) {
           var elapsed = Math.max(0, now - Number(state.shownAt||0));
           var step = Math.floor(elapsed / cycle);
           var elapsedInCycle = elapsed % cycle;
 
           if (elapsedInCycle < SHOW_MS){
-            // still in show window → resume that card until it finishes
             idx = (Number(state.idx||0) + step) % items.length;
             var remainingShow = SHOW_MS - elapsedInCycle;
 
@@ -733,7 +725,6 @@
             }, remainingShow + GAP_MS);
 
           } else {
-            // in the gap → next card after remaining gap
             idx = (Number(state.idx||0) + step + 1) % items.length;
             var remainingGap = cycle - elapsedInCycle;
             startFrom(remainingGap);
@@ -750,7 +741,6 @@
     });
   }
 
-  // Fixed: only update index on unload; keep original shownAt intact (and keep any manualClose/snooze)
   window.addEventListener('beforeunload', function(){
     try {
       if (!items.length) return;
@@ -759,6 +749,5 @@
     } catch(_) {}
   });
 
-  /* ---- go ---- */
   loadAll();
 })();
